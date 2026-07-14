@@ -8,7 +8,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: workout
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-workout}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no ambiente}
       POSTGRES_DB: workout
     volumes:
       - pgdata_prod:/var/lib/postgresql/data
@@ -24,7 +24,7 @@ services:
       dockerfile: docker/api.Dockerfile
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://workout:${POSTGRES_PASSWORD:-workout}@db:5432/workout?schema=public
+      DATABASE_URL: postgresql://workout:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no ambiente}@db:5432/workout?schema=public
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no ambiente}
       JWT_EXPIRES_IN: 7d
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}

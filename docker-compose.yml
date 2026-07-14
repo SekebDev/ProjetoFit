@@ -27,6 +27,7 @@ services:
     command: sh -c "pnpm --filter @workout/shared build && pnpm --filter @workout/api exec prisma migrate deploy && pnpm --filter @workout/api dev"
     environment:
       DATABASE_URL: postgresql://workout:workout@db:5432/workout?schema=public
+      # dev only — em produção o JWT_SECRET vem do ambiente (docker-compose.prod.yml)
       JWT_SECRET: dev-secret-change-me-0123456789abcdef0123456789
       JWT_EXPIRES_IN: 7d
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}

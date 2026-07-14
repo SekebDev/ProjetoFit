@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
@@ -15,8 +16,10 @@ async function bootstrap(): Promise<void> {
 
   const port = Number(config.get<string>("PORT") ?? 3001);
   await app.listen(port);
-  // eslint-disable-next-line no-console
-  console.log(`[api] rodando em http://localhost:${port}/api`);
+  Logger.log(`API rodando em http://localhost:${port}/api`, "Bootstrap");
 }
 
-void bootstrap();
+bootstrap().catch((err) => {
+  Logger.error(err, "Bootstrap");
+  process.exit(1);
+});
