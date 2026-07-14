@@ -1,0 +1,23 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# builds
+dist/
+.next/
+out/
+*.tsbuildinfo
+
+# env / secrets
+.env
+.env.local
+.env.*.local
+
+# prisma / sqlite (dados pessoais — backup à parte)
+apps/api/prisma/*.db
+apps/api/prisma/*.db-journal
+
+# logs / os
+*.log
+.DS_Store
+Thumbs.db

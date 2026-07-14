@@ -1,0 +1,18 @@
+# nunca envie node_modules do host (Windows) p/ o build (COPY . .)
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/*.tsbuildinfo
+
+.git
+.gitignore
+**/.env
+**/.env.local
+**/*.log
+apps/api/prisma/*.db
+apps/api/prisma/*.db-journal
+
+# infra que não entra na imagem
+docker-compose*.yml
+README*.md

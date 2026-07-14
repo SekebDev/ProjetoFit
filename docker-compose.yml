@@ -1,0 +1,80 @@
+# Ambiente de DESENVOLVIMENTO: Postgres + api + web com hot-reload.
+# Uso: docker compose up   (substitui o `pnpm dev`)
+name: workout
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: workout
+      POSTGRES_PASSWORD: workout
+      POSTGRES_DB: workout
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workout -d workout"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/dev.Dockerfile
+    command: sh -c "pnpm --filter @workout/shared build && pnpm --filter @workout/api exec prisma migrate deploy && pnpm --filter @workout/api dev"
+    environment:
+      DATABASE_URL: postgresql://workout:workout@db:5432/workout?schema=public
+      JWT_SECRET: dev-secret-change-me-0123456789abcdef0123456789
+      JWT_EXPIRES_IN: 7d
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      PORT: "3001"
+      WEB_ORIGIN: http://localhost:3000
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # código-fonte (hot-reload)
+      - ./apps/api:/app/apps/api
+      - ./packages/shared:/app/packages/shared
+      # máscaras: preservam a instalação Linux feita na imagem
+      - api_root_nm:/app/node_modules
+      - api_app_nm:/app/apps/api/node_modules
+      - api_shared_nm:/app/packages/shared/node_modules
+      - api_shared_dist:/app/packages/shared/dist
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/dev.Dockerfile
+    command: sh -c "pnpm --filter @workout/shared build && pnpm --filter @workout/web dev"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    volumes:
+      - ./apps/web:/app/apps/web
+      - ./packages/shared:/app/packages/shared
+      - web_root_nm:/app/node_modules
+      - web_app_nm:/app/apps/web/node_modules
+      - web_shared_nm:/app/packages/shared/node_modules
+      - web_shared_dist:/app/packages/shared/dist
+      - web_next:/app/apps/web/.next
+
+volumes:
+  pgdata:
+  api_root_nm:
+  api_app_nm:
+  api_shared_nm:
+  api_shared_dist:
+  web_root_nm:
+  web_app_nm:
+  web_shared_nm:
+  web_shared_dist:
+  web_next:
