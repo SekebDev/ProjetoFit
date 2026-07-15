@@ -17,6 +17,12 @@ out/
 apps/api/prisma/*.db
 apps/api/prisma/*.db-journal
 
+# playwright (artefatos de execução: traces, screenshots de falha)
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
 # logs / os
 *.log
 .DS_Store

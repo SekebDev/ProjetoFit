@@ -21,6 +21,15 @@
     "resolveJsonModule": true,
     "moduleResolution": "node"
   },
-  "include": ["src"],
+  // Inclui test/prisma/configs de proposito: sem eles o `typecheck` passava
+  // por cima do seed e dos testes, que nunca eram verificados. O build usa
+  // tsconfig.build.json, que exclui tudo isso do dist.
+  "include": [
+    "src",
+    "test",
+    "prisma",
+    "vitest.config.ts",
+    "vitest.e2e.config.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }
