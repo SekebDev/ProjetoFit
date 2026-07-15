@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, Dumbbell, House, User } from "lucide-react";
+import { ClipboardList, Dumbbell, House, TrendingUp, User } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -13,10 +13,14 @@ interface NavLink {
   icon: LucideIcon;
 }
 
+// Cinco e o teto: a barra de baixo divide a largura igualmente, e uma sexta aba
+// deixaria cada alvo abaixo dos 44px de toque. Por isso /history nao esta aqui —
+// ela e alcancavel de dentro de /progress, que e de onde faz sentido procurar.
 const LINKS: NavLink[] = [
   { href: "/", label: "Painel", icon: House },
   { href: "/exercises", label: "Biblioteca", icon: Dumbbell },
   { href: "/plans", label: "Planos", icon: ClipboardList },
+  { href: "/progress", label: "Progresso", icon: TrendingUp },
   { href: "/profile", label: "Perfil", icon: User },
 ];
 
@@ -104,7 +108,7 @@ function BottomTabs({ pathname }: { pathname: string }) {
       aria-label="Navegação principal"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--bg)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden"
     >
-      <ul className="grid grid-cols-4">
+      <ul className="grid grid-cols-5">
         {LINKS.map((link) => {
           const active = isActive(pathname, link.href);
           const Icon = link.icon;

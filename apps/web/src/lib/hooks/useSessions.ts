@@ -1,6 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { LastLoad, LogSetInput, Session, SetLog } from "@workout/shared";
+import type {
+  LastLoad,
+  LogSetInput,
+  Session,
+  SessionSummary,
+  SetLog,
+} from "@workout/shared";
 import { apiFetch } from "@/lib/api";
+
+/** Historico de sessoes, da mais recente pra mais antiga (a tela /history). */
+export function useSessionHistory() {
+  return useQuery({
+    queryKey: ["sessions"],
+    queryFn: () => apiFetch<SessionSummary[]>("/sessions"),
+  });
+}
 
 /**
  * A sessao do dia, criando se ainda nao existir.
@@ -80,6 +94,12 @@ export function useFinishSession(sessionId: string, planDayId: string) {
       qc.setQueryData(["session", planDayId], session);
       // A sessao virou historico: agora ela conta como "ultima carga".
       void qc.invalidateQueries({ queryKey: ["last-loads", planDayId] });
+      // ...e so agora ela entra no /history e nos graficos, porque os dois so
+      // olham sessao encerrada. Sem invalidar, quem termina o treino e abre o
+      // progresso ve o estado de antes do treino que acabou de fazer.
+      void qc.invalidateQueries({ queryKey: ["sessions"] });
+      void qc.invalidateQueries({ queryKey: ["progress-summary"] });
+      void qc.invalidateQueries({ queryKey: ["progress-exercise"] });
     },
   });
 }
