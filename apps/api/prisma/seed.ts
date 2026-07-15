@@ -18,6 +18,9 @@ interface FreeExercise {
 }
 
 // Free Exercise DB (muitos músculos) -> nossos 6 grupos.
+/** Upserts por transacao. Lotes grandes demais seguram locks por mais tempo. */
+const SEED_CHUNK = 100;
+
 const MUSCLE_MAP: Record<string, string> = {
   chest: "CHEST",
   back: "BACK",
@@ -85,15 +88,28 @@ async function main(): Promise<void> {
     };
   });
 
-  await prisma.exercise.deleteMany();
-  const result = await prisma.exercise.createMany({ data, skipDuplicates: true });
-  // eslint-disable-next-line no-console
-  console.log(`Seed: ${result.count} exercícios inseridos.`);
+  // Upsert por slug, nunca deleteMany: os planos referenciam Exercise.id, e
+  // apagar/recriar regeraria os cuid() deixando PlanExercise apontando pro vazio.
+  // O slug (id do dataset) e a chave natural estavel entre execucoes.
+  //
+  // Em lotes: um upsert por vez seriam ~900 idas e voltas ao banco.
+  for (let i = 0; i < data.length; i += SEED_CHUNK) {
+    const chunk = data.slice(i, i + SEED_CHUNK);
+    await prisma.$transaction(
+      chunk.map((item) =>
+        prisma.exercise.upsert({
+          where: { slug: item.slug },
+          create: item,
+          update: item,
+        }),
+      ),
+    );
+  }
+  console.log(`Seed: ${data.length} exercícios sincronizados.`);
 }
 
 main()
   .catch((e) => {
-    // eslint-disable-next-line no-console
     console.error(e);
     process.exit(1);
   })
