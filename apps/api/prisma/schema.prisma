@@ -17,6 +17,7 @@ model User {
   profile      Profile?
   plans        WorkoutPlan[]
   sessions     WorkoutSession[]
+  metrics      BodyMetric[]
 }
 
 model Profile {
@@ -153,4 +154,31 @@ model SetLog {
   @@index([sessionId])
   // Busca da "ultima carga" (GET /sessions/last-loads) filtra por exercicio.
   @@index([exerciseId])
+}
+
+/**
+ * Peso corporal e composicao ao longo do tempo — a serie que alimenta o
+ * terceiro grafico de /progress.
+ *
+ * Nao confundir com Profile.weightKg, que e o peso declarado uma vez no
+ * cadastro e serve pra IA dimensionar o plano. Este aqui e historico: varias
+ * medidas por usuario, cada uma com data. Sao coisas diferentes de proposito.
+ */
+model BodyMetric {
+  id       String   @id @default(cuid())
+  userId   String
+  // Cascade, igual WorkoutSession: apagar a conta leva junto os dados pessoais.
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date     DateTime @default(now())
+  // Tudo nullable: pesar sem medir bodyFat e o caso comum, e o contrario
+  // (so uma anotacao) tambem e valido.
+  weightKg Float?
+  bodyFat  Float?
+  notes    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // "meu peso ao longo do tempo" — a unica leitura que existe.
+  @@index([userId, date])
 }

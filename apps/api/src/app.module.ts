@@ -3,9 +3,11 @@ import { ConfigModule } from "@nestjs/config";
 import { AuthModule } from "./auth/auth.module";
 import { ExercisesModule } from "./exercises/exercises.module";
 import { HealthModule } from "./health/health.module";
+import { MetricsModule } from "./metrics/metrics.module";
 import { PlansModule } from "./plans/plans.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ProfileModule } from "./profile/profile.module";
+import { ProgressModule } from "./progress/progress.module";
 import { SessionsModule } from "./sessions/sessions.module";
 
 @Module({
@@ -18,6 +20,8 @@ import { SessionsModule } from "./sessions/sessions.module";
     ProfileModule,
     PlansModule,
     SessionsModule,
+    ProgressModule,
+    MetricsModule,
   ],
 })
 export class AppModule {}
