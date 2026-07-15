@@ -7,6 +7,7 @@ import {
   type ExerciseFilter,
 } from "@workout/shared";
 import { ExerciseCard } from "@/components/ExerciseCard";
+import { Mascot } from "@/components/Mascot";
 import { useExercises } from "@/lib/hooks/useExercises";
 import { EQUIP_LABELS, MUSCLE_META, MUSCLE_ORDER } from "@/lib/meta";
 import { cn } from "@/lib/utils";
@@ -112,9 +113,12 @@ export default function ExercisesPage() {
           Nao foi possivel carregar. A API esta no ar?
         </p>
       ) : !data || data.length === 0 ? (
-        <p className="py-16 text-center text-sm text-[var(--muted)]">
-          Nenhum exercicio com esses filtros.
-        </p>
+        <div className="flex flex-col items-center gap-3 py-16">
+          <Mascot state="sleep" size="md" />
+          <p className="text-sm text-[var(--muted)]">
+            Nenhum exercicio com esses filtros.
+          </p>
+        </div>
       ) : (
         <>
           <p className="mb-4 font-[family-name:var(--font-mono-face)] text-xs text-[var(--muted)]">

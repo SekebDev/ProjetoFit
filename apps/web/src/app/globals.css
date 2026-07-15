@@ -61,3 +61,12 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* mascote: respiracao sutil */
+@keyframes mascot-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.mascot-float {
+  animation: mascot-float 4s ease-in-out infinite;
+}
