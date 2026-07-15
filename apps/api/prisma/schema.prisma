@@ -8,13 +8,14 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String        @id @default(cuid())
+  email        String        @unique
   name         String?
   passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   profile      Profile?
+  plans        WorkoutPlan[]
 }
 
 model Profile {
@@ -36,8 +37,8 @@ model Profile {
 }
 
 model Exercise {
-  id             String   @id @default(cuid())
-  slug           String   @unique
+  id             String         @id @default(cuid())
+  slug           String         @unique
   name           String
   muscleGroup    String // CHEST | BACK | SHOULDERS | ARMS | LEGS | CORE
   category       String // COMPOUND | ISOLATION
@@ -45,9 +46,56 @@ model Exercise {
   imageUrl       String?
   videoUrl       String?
   instructions   String?
-  defaultRestSec Int      @default(60)
-  createdAt      DateTime @default(now())
+  defaultRestSec Int            @default(60)
+  createdAt      DateTime       @default(now())
+  planItems      PlanExercise[]
 
   @@index([muscleGroup])
   @@index([equipment])
+}
+
+model WorkoutPlan {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  source    String    @default("MANUAL") // MANUAL | AI
+  notes     String?
+  isActive  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  days      PlanDay[]
+
+  // "planos do usuario X, ativo primeiro" e a consulta mais comum.
+  @@index([userId])
+  @@index([userId, isActive])
+}
+
+model PlanDay {
+  id        String         @id @default(cuid())
+  planId    String
+  plan      WorkoutPlan    @relation(fields: [planId], references: [id], onDelete: Cascade)
+  name      String // "Push", "Pull"
+  focus     String?
+  order     Int
+  exercises PlanExercise[]
+
+  @@index([planId])
+}
+
+model PlanExercise {
+  id         String   @id @default(cuid())
+  planDayId  String
+  planDay    PlanDay  @relation(fields: [planDayId], references: [id], onDelete: Cascade)
+  exerciseId String
+  // Restrict (padrao): impede apagar um exercicio que esta em uso num plano.
+  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+  order      Int
+  sets       Int
+  repScheme  String // "8-12"
+  restSec    Int
+  notes      String?
+
+  @@index([planDayId])
+  @@index([exerciseId])
 }
