@@ -11,6 +11,11 @@
   --muted-2: #6b7280;
   --chalk: #f2f4f7;
 
+  /* Espaco reservado embaixo pra barra de abas fixa (que so existe no mobile).
+     Quem precisa escapar dela usa var(--bottom-nav-space) em vez de repetir
+     o numero — mudar a barra num lugar so nao pode quebrar o resto. */
+  --bottom-nav-space: 5rem;
+
   /* cores de anilha por grupo muscular */
   --m-chest: #e5484d;
   --m-back: #3e7bfa;
@@ -18,6 +23,14 @@
   --m-arms: #9b72f2;
   --m-legs: #3da35d;
   --m-core: #22b8cf;
+}
+
+/* A barra de abas some no >=sm (breakpoint padrao do Tailwind), entao o
+   espaco reservado tambem zera — sem precisar de variante sm: em cada uso. */
+@media (min-width: 40rem) {
+  :root {
+    --bottom-nav-space: 0px;
+  }
 }
 
 * {

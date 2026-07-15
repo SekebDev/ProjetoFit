@@ -8,11 +8,12 @@ export const MASCOT_NAME = "Rackie";
 /** Estados da mascote. cheer/rest/sad sao usados a partir das Fases 3 e 7. */
 export type MascotState = "idle" | "sleep" | "cheer" | "rest" | "sad";
 
-const SIZES = { sm: 72, md: 128, lg: 208 } as const;
+/** Altura da mascote. A largura sai da proporcao da arte, que e retrato. */
+const HEIGHTS = { sm: 72, md: 128, lg: 208 } as const;
 
 interface Props {
   state?: MascotState;
-  size?: keyof typeof SIZES;
+  size?: keyof typeof HEIGHTS;
   className?: string;
 }
 
@@ -22,23 +23,23 @@ interface Props {
  */
 export function Mascot({ state = "idle", size = "md", className }: Props) {
   const [failed, setFailed] = useState(false);
-  const px = SIZES[size];
+  const px = HEIGHTS[size];
 
   if (failed) {
     return <MascotPlaceholder px={px} className={className} />;
   }
 
   return (
+    // Altura fixa + largura auto: travar num quadrado encolhe a arte retrato
+    // ate caber, deixando o personagem pequeno no meio de um vazio.
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={`/mascot/${state}.png`}
       alt=""
       aria-hidden
-      width={px}
-      height={px}
       onError={() => setFailed(true)}
-      className={cn("select-none object-contain", className)}
-      style={{ width: px, height: px }}
+      className={cn("w-auto max-w-none select-none", className)}
+      style={{ height: px }}
       draggable={false}
     />
   );

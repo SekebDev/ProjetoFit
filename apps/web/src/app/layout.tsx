@@ -32,7 +32,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       lang="pt-BR"
       className={display.variable + " " + body.variable + " " + mono.variable}
     >
-      <body className="min-h-screen">
+      {/* A bottom-tab e fixa e cobriria o fim da pagina; o token ja zera no >=sm. */}
+      <body className="min-h-screen pb-[var(--bottom-nav-space)]">
         <Providers>
           <Nav />
           {children}

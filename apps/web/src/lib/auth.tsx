@@ -24,15 +24,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<PublicUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // O token so existe no localStorage, entao a sessao nao da pra resolver no
+  // servidor: comeca em loading e resolve depois da montagem.
   useEffect(() => {
-    if (!getToken()) {
-      setLoading(false);
-      return;
+    let cancelado = false;
+
+    async function restaurarSessao(): Promise<void> {
+      if (getToken()) {
+        try {
+          const me = await apiFetch<PublicUser>("/auth/me");
+          if (!cancelado) setUser(me);
+        } catch {
+          // Token expirado ou invalido: descarta e segue deslogado.
+          setToken(null);
+        }
+      }
+      if (!cancelado) setLoading(false);
     }
-    apiFetch<PublicUser>("/auth/me")
-      .then(setUser)
-      .catch(() => setToken(null))
-      .finally(() => setLoading(false));
+
+    void restaurarSessao();
+    // Sem isto, desmontar no meio do /auth/me faria setState em componente morto.
+    return () => {
+      cancelado = true;
+    };
   }, []);
 
   async function login(email: string, password: string): Promise<void> {

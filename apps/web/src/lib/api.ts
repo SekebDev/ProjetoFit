@@ -14,6 +14,26 @@ export function setToken(token: string | null): void {
   else window.localStorage.removeItem(TOKEN_KEY);
 }
 
+interface ZodIssue {
+  path: (string | number)[];
+  message: string;
+}
+interface ApiErrorBody {
+  message?: string;
+  issues?: ZodIssue[];
+}
+
+/**
+ * Um 400 do ZodValidationPipe traz `issues` com o caminho exato do campo.
+ * Ignorar isso deixava o usuário com um "Dados inválidos" sem pista de onde.
+ */
+function errorMessage(body: ApiErrorBody | null, status: number): string {
+  const base = body?.message ?? `Requisição falhou: ${status}`;
+  const first = body?.issues?.[0];
+  if (!first) return base;
+  return `${base} (${first.path.join(".")}: ${first.message})`;
+}
+
 /** Cliente HTTP central. A chave da OpenAI NUNCA passa por aqui — só pelo Nest. */
 export async function apiFetch<T>(
   path: string,
@@ -30,10 +50,8 @@ export async function apiFetch<T>(
   });
 
   if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as
-      | { message?: string }
-      | null;
-    throw new Error(body?.message ?? `Requisição falhou: ${res.status}`);
+    const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
+    throw new Error(errorMessage(body, res.status));
   }
 
   if (res.status === 204) return undefined as T;
