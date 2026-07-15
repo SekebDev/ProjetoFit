@@ -33,6 +33,9 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       PORT: "3001"
       WEB_ORIGIN: http://localhost:3000
+      # bind mount do Windows nao propaga inotify: polling e obrigatorio p/ hot-reload
+      CHOKIDAR_USEPOLLING: "true"
+      TSC_WATCHFILE: DynamicPriorityPolling
     ports:
       - "3001:3001"
     depends_on:
@@ -55,6 +58,9 @@ services:
     command: sh -c "pnpm --filter @workout/shared build && pnpm --filter @workout/web dev"
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:3001/api
+      # ATENCAO: no Windows o bind mount nao propaga inotify e o Turbopack nao
+      # suporta polling -> o web NAO tem hot-reload aqui. Use `pnpm dev` no host
+      # para desenvolver, ou `docker compose restart web` apos alterar arquivos.
     ports:
       - "3000:3000"
     depends_on:
