@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Check, Pencil } from "lucide-react";
+import { ArrowLeft, Check, Pencil, Play } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -130,7 +130,7 @@ function PlanView({ plan, onEdit }: { plan: Plan; onEdit: () => void }) {
             key={day.id}
             className="overflow-hidden rounded-xl border bg-[var(--surface)]"
           >
-            <div className="flex items-baseline gap-3 border-b px-4 py-3">
+            <div className="flex items-center gap-3 border-b px-4 py-3">
               <span className="font-[family-name:var(--font-mono-face)] text-xs text-[var(--muted-2)]">
                 {String(index + 1).padStart(2, "0")}
               </span>
@@ -142,6 +142,13 @@ function PlanView({ plan, onEdit }: { plan: Plan; onEdit: () => void }) {
                   {day.focus}
                 </span>
               ) : null}
+              <Link
+                href={`/workout/${day.id}`}
+                className="ml-auto flex min-h-9 shrink-0 items-center gap-1.5 rounded-md bg-[var(--chalk)] px-3 text-xs font-semibold text-black transition-opacity hover:opacity-90"
+              >
+                <Play size={12} strokeWidth={2.5} aria-hidden />
+                Treinar
+              </Link>
             </div>
 
             <ul className="divide-y">

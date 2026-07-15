@@ -6,8 +6,9 @@ const REPO_ROOT = resolve(__dirname, "../../..");
 /**
  * O E2E de browser roda contra o stack de dev (e o banco de dev), porque e o
  * app real que queremos exercitar. Para nao deixar lixo, todo usuario criado
- * usa o dominio @playwright.local e e apagado aqui — o cascade de
- * User -> WorkoutPlan leva os planos junto.
+ * usa o dominio @playwright.local e e apagado aqui — os cascades de
+ * User -> WorkoutPlan e User -> WorkoutSession -> SetLog levam junto os planos,
+ * as sessoes de treino e as series registradas.
  *
  * A tabela Exercise nunca e tocada: o teste so le a biblioteca.
  */
