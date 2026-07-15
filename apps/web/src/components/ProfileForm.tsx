@@ -10,7 +10,7 @@ import {
   type UpdateProfileInput,
 } from "@workout/shared";
 import { EQUIP_LABELS } from "@/lib/meta";
-import { cn } from "@/lib/utils";
+import { cn, numOrNull } from "@/lib/utils";
 
 const GOAL_LABELS: Record<(typeof GOALS)[number], string> = {
   FAT_LOSS: "Emagrecimento",
@@ -39,11 +39,6 @@ const FOCUS_LABELS: Record<(typeof FOCUS_AREAS)[number], string> = {
 
 function toggle<T>(arr: T[], value: T): T[] {
   return arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
-}
-function numOrNull(v: string): number | null {
-  if (v.trim() === "") return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
 }
 
 interface Props {
