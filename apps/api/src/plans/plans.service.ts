@@ -5,11 +5,11 @@ import {
 } from "@nestjs/common";
 import type {
   CreatePlanInput,
-  Exercise,
   Plan,
   PlanSummary,
   UpdatePlanInput,
 } from "@workout/shared";
+import { toPlan, type PlanRow } from "../common/plan-mappers";
 import { PrismaService } from "../prisma/prisma.service";
 
 /** Traz o plano inteiro: dias ordenados, exercicios ordenados, com o Exercise. */
@@ -24,84 +24,6 @@ const PLAN_INCLUDE = {
     },
   },
 } as const;
-
-interface ExerciseRow {
-  id: string;
-  slug: string;
-  name: string;
-  muscleGroup: string;
-  category: string;
-  equipment: string;
-  imageUrl: string | null;
-  videoUrl: string | null;
-  instructions: string | null;
-  defaultRestSec: number;
-}
-
-interface PlanRow {
-  id: string;
-  name: string;
-  source: string;
-  notes: string | null;
-  isActive: boolean;
-  createdAt: Date;
-  days: {
-    id: string;
-    name: string;
-    focus: string | null;
-    order: number;
-    exercises: {
-      id: string;
-      order: number;
-      sets: number;
-      repScheme: string;
-      restSec: number;
-      notes: string | null;
-      exercise: ExerciseRow;
-    }[];
-  }[];
-}
-
-function toExercise(row: ExerciseRow): Exercise {
-  return {
-    id: row.id,
-    slug: row.slug,
-    name: row.name,
-    muscleGroup: row.muscleGroup as Exercise["muscleGroup"],
-    category: row.category as Exercise["category"],
-    equipment: row.equipment as Exercise["equipment"],
-    imageUrl: row.imageUrl,
-    videoUrl: row.videoUrl,
-    instructions: row.instructions,
-    defaultRestSec: row.defaultRestSec,
-  };
-}
-
-function toPlan(row: PlanRow): Plan {
-  return {
-    id: row.id,
-    name: row.name,
-    source: row.source as Plan["source"],
-    notes: row.notes,
-    isActive: row.isActive,
-    createdAt: row.createdAt.toISOString(),
-    days: row.days.map((day) => ({
-      id: day.id,
-      name: day.name,
-      focus: day.focus,
-      order: day.order,
-      exercises: day.exercises.map((pe) => ({
-        id: pe.id,
-        order: pe.order,
-        sets: pe.sets,
-        repScheme: pe.repScheme,
-        restSec: pe.restSec,
-        notes: pe.notes,
-        exercise: toExercise(pe.exercise),
-      })),
-    })),
-  };
-}
 
 /** Monta o `days.create` aninhado, derivando `order` do indice do array. */
 function buildDaysCreate(input: CreatePlanInput) {
