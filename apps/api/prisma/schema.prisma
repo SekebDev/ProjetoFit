@@ -8,14 +8,15 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  email        String        @unique
+  id           String           @id @default(cuid())
+  email        String           @unique
   name         String?
   passwordHash String
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
   profile      Profile?
   plans        WorkoutPlan[]
+  sessions     WorkoutSession[]
 }
 
 model Profile {
@@ -49,6 +50,7 @@ model Exercise {
   defaultRestSec Int            @default(60)
   createdAt      DateTime       @default(now())
   planItems      PlanExercise[]
+  setLogs        SetLog[]
 
   @@index([muscleGroup])
   @@index([equipment])
@@ -72,13 +74,14 @@ model WorkoutPlan {
 }
 
 model PlanDay {
-  id        String         @id @default(cuid())
+  id        String           @id @default(cuid())
   planId    String
-  plan      WorkoutPlan    @relation(fields: [planId], references: [id], onDelete: Cascade)
+  plan      WorkoutPlan      @relation(fields: [planId], references: [id], onDelete: Cascade)
   name      String // "Push", "Pull"
   focus     String?
   order     Int
   exercises PlanExercise[]
+  sessions  WorkoutSession[]
 
   @@index([planId])
 }
@@ -97,5 +100,57 @@ model PlanExercise {
   notes      String?
 
   @@index([planDayId])
+  @@index([exerciseId])
+}
+
+model WorkoutSession {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planDayId String?
+  // SetNull, nao Restrict: editar um plano apaga e recria os PlanDay
+  // (plans.service.update). Com Restrict, quem ja treinou nao conseguiria mais
+  // editar o proprio plano. O historico sobrevive sem saber de que dia veio —
+  // os SetLog penduram na sessao, nao no dia, entao nada de dado se perde.
+  planDay   PlanDay? @relation(fields: [planDayId], references: [id], onDelete: SetNull)
+
+  date        DateTime  @default(now())
+  // null = sessao em aberto. E o que o POST /sessions procura pra devolver a
+  // sessao existente em vez de criar uma duplicada.
+  finishedAt  DateTime?
+  durationSec Int?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  setLogs     SetLog[]
+
+  // "a sessao aberta do usuario X" — a consulta do POST /sessions.
+  @@index([userId, finishedAt])
+  // "historico do usuario X, mais recente primeiro" — a consulta do GET /sessions.
+  @@index([userId, date])
+  @@index([planDayId])
+}
+
+model SetLog {
+  id         String         @id @default(cuid())
+  sessionId  String
+  session    WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exerciseId String
+  // Restrict (padrao), igual PlanExercise: nao deixa sumir exercicio com historico.
+  exercise   Exercise       @relation(fields: [exerciseId], references: [id])
+  setNumber  Int
+  weightKg   Float?
+  reps       Int?
+  rpe        Float?
+  completed  Boolean        @default(true)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  // Torna o registro de serie idempotente: reenviar a mesma serie (retry de
+  // rede, ou corrigir a carga digitada errada) atualiza em vez de duplicar.
+  // Sem isto, um retry no metro viraria volume fantasma nos graficos da Fase 4.
+  @@unique([sessionId, exerciseId, setNumber])
+  @@index([sessionId])
+  // Busca da "ultima carga" (GET /sessions/last-loads) filtra por exercicio.
   @@index([exerciseId])
 }
