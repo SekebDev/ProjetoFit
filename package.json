@@ -11,7 +11,8 @@
     "build": "pnpm --filter @workout/shared build && pnpm --filter @workout/api build && pnpm --filter @workout/web build",
     "db:generate": "pnpm --filter @workout/api prisma:generate",
     "db:migrate": "pnpm --filter @workout/api prisma:migrate",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint"
   },
   "devDependencies": {
     "concurrently": "10.0.3",
