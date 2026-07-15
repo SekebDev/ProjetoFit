@@ -24,7 +24,7 @@ services:
     build:
       context: .
       dockerfile: docker/dev.Dockerfile
-    command: sh -c "pnpm --filter @workout/shared build && pnpm --filter @workout/api exec prisma migrate deploy && pnpm --filter @workout/api dev"
+    command: sh -c "pnpm --filter @workout/shared build && pnpm --filter @workout/api prisma:generate && pnpm --filter @workout/api exec prisma migrate deploy && pnpm --filter @workout/api dev"
     environment:
       DATABASE_URL: postgresql://workout:workout@db:5432/workout?schema=public
       # dev only — em produção o JWT_SECRET vem do ambiente (docker-compose.prod.yml)
