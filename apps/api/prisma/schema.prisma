@@ -171,10 +171,21 @@ model BodyMetric {
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   date     DateTime @default(now())
   // Tudo nullable: pesar sem medir bodyFat e o caso comum, e o contrario
-  // (so uma anotacao) tambem e valido.
+  // (so uma anotacao) tambem e valido. Vale pra composicao inteira — quem
+  // sobe na balanca todo dia nao passa a fita metrica todo dia.
   weightKg Float?
   bodyFat  Float?
   notes    String?
+
+  // Composicao corporal, registrada em /profile (secao avancada). Mora aqui e
+  // nao no Profile de proposito: sao medidas que mudam ao longo do tempo, e o
+  // Profile guarda o que voce declara uma vez. Ter os dois seria ter dois
+  // numeros que discordam — o problema que Profile.weightKg ja tem hoje.
+  leanMassKg Float?
+  waistCm    Float?
+  armCm      Float?
+  chestCm    Float?
+  thighCm    Float?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

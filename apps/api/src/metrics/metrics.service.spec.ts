@@ -1,3 +1,4 @@
+import type { CreateMetricInput } from "@workout/shared";
 import { describe, expect, it, vi } from "vitest";
 import { MetricsService } from "./metrics.service";
 
@@ -6,8 +7,33 @@ const LINHA = {
   date: new Date("2026-07-15T17:31:13.000Z"),
   weightKg: 82.5,
   bodyFat: 18.2,
+  leanMassKg: 67.5,
+  waistCm: 84,
+  armCm: 38,
+  chestCm: 104,
+  thighCm: 58,
   notes: null,
 };
+
+/**
+ * Entrada completa com tudo nulo, sobrescrevendo so o que o teste liga.
+ *
+ * Todo campo e nullable e nao opcional, entao o literal precisa citar todos —
+ * sem este helper, cada medida nova quebraria todo teste que monta uma entrada.
+ */
+function entrada(over: Partial<CreateMetricInput> = {}): CreateMetricInput {
+  return {
+    weightKg: null,
+    bodyFat: null,
+    leanMassKg: null,
+    waistCm: null,
+    armCm: null,
+    chestCm: null,
+    thighCm: null,
+    notes: null,
+    ...over,
+  };
+}
 
 function criaService(rows: unknown[] = []) {
   const prisma = {
@@ -24,27 +50,53 @@ describe("MetricsService", () => {
     it("grava a metrica no usuario do token", async () => {
       const { service, prisma } = criaService();
 
-      await service.create("u1", {
-        weightKg: 82.5,
-        bodyFat: 18.2,
-        notes: null,
-      });
+      await service.create("u1", entrada({ weightKg: 82.5, bodyFat: 18.2 }));
 
       expect(prisma.bodyMetric.create).toHaveBeenCalledWith({
-        data: { userId: "u1", weightKg: 82.5, bodyFat: 18.2, notes: null },
+        data: { userId: "u1", ...entrada({ weightKg: 82.5, bodyFat: 18.2 }) },
+      });
+    });
+
+    it("grava a composicao corporal inteira", async () => {
+      const { service, prisma } = criaService();
+
+      await service.create(
+        "u1",
+        entrada({ waistCm: 84, armCm: 38, chestCm: 104, thighCm: 58 }),
+      );
+
+      expect(prisma.bodyMetric.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          waistCm: 84,
+          armCm: 38,
+          chestCm: 104,
+          thighCm: 58,
+        }),
       });
     });
 
     it("devolve a data como ISO, nao como Date", async () => {
       const { service } = criaService();
 
-      const res = await service.create("u1", {
-        weightKg: 82.5,
-        bodyFat: 18.2,
-        notes: null,
-      });
+      const res = await service.create("u1", entrada({ weightKg: 82.5 }));
 
       expect(res.date).toBe("2026-07-15T17:31:13.000Z");
+    });
+
+    it("devolve as medidas de composicao gravadas", async () => {
+      const { service } = criaService();
+
+      const res = await service.create("u1", entrada({ waistCm: 84 }));
+
+      // O mapper e escrito campo a campo: se uma medida nova entrar no schema e
+      // nao no toMetric, ela seria gravada e nunca devolvida.
+      expect(res).toMatchObject({
+        leanMassKg: 67.5,
+        waistCm: 84,
+        armCm: 38,
+        chestCm: 104,
+        thighCm: 58,
+      });
     });
   });
 

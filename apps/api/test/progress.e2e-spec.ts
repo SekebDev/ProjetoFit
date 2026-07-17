@@ -473,6 +473,27 @@ describe("Progress (e2e)", () => {
   });
 
   describe("POST /metrics · GET /metrics", () => {
+    /**
+     * Corpo completo com tudo nulo, ligando so o que o teste precisa.
+     *
+     * Todo campo e nullable mas obrigatorio (a convencao do app, ver
+     * session.ts:23): o cliente diz explicitamente "nao medi" em vez de omitir.
+     * Sem este helper, cada medida nova quebraria todo teste daqui.
+     */
+    function corpo(over: Record<string, unknown> = {}) {
+      return {
+        weightKg: null,
+        bodyFat: null,
+        leanMassKg: null,
+        waistCm: null,
+        armCm: null,
+        chestCm: null,
+        thighCm: null,
+        notes: null,
+        ...over,
+      };
+    }
+
     function cria(token: string, body: object) {
       return request(app.getHttpServer())
         .post("/api/metrics")
@@ -487,9 +508,7 @@ describe("Progress (e2e)", () => {
     }
 
     it("registra o peso e devolve na listagem", async () => {
-      await cria(tokenA, { weightKg: 82.5, bodyFat: 18.2, notes: null }).expect(
-        201,
-      );
+      await cria(tokenA, corpo({ weightKg: 82.5, bodyFat: 18.2 })).expect(201);
 
       const res = await lista(tokenA).expect(200);
 
@@ -498,32 +517,59 @@ describe("Progress (e2e)", () => {
     });
 
     it("aceita so o peso, sem bodyFat", async () => {
-      await cria(tokenA, { weightKg: 80, bodyFat: null, notes: null }).expect(
-        201,
-      );
+      await cria(tokenA, corpo({ weightKg: 80 })).expect(201);
+    });
+
+    it("registra a composicao corporal inteira", async () => {
+      await cria(
+        tokenA,
+        corpo({
+          weightKg: 82.5,
+          bodyFat: 18.2,
+          leanMassKg: 67.5,
+          waistCm: 84,
+          armCm: 38,
+          chestCm: 104,
+          thighCm: 58,
+        }),
+      ).expect(201);
+
+      const res = await lista(tokenA).expect(200);
+
+      expect(res.body[0]).toMatchObject({
+        leanMassKg: 67.5,
+        waistCm: 84,
+        armCm: 38,
+        chestCm: 104,
+        thighCm: 58,
+      });
+    });
+
+    it("aceita so medidas de fita, sem peso", async () => {
+      // Quem passa a fita nao necessariamente sobe na balanca no mesmo dia.
+      await cria(tokenA, corpo({ waistCm: 84, armCm: 38 })).expect(201);
     });
 
     it("rejeita registro totalmente vazio com 400", async () => {
-      await cria(tokenA, {
-        weightKg: null,
-        bodyFat: null,
-        notes: null,
-      }).expect(400);
+      await cria(tokenA, corpo()).expect(400);
     });
 
     it("rejeita peso fora do range com 400", async () => {
-      await cria(tokenA, { weightKg: 900, bodyFat: null, notes: null }).expect(
-        400,
-      );
+      await cria(tokenA, corpo({ weightKg: 900 })).expect(400);
+    });
+
+    it("rejeita medida de fita fora do range com 400", async () => {
+      await cria(tokenA, corpo({ waistCm: 800 })).expect(400);
+    });
+
+    it("rejeita corpo sem os campos obrigatorios com 400", async () => {
+      // Nullable, mas obrigatorio: omitir o campo nao e o mesmo que dizer null.
+      await cria(tokenA, { weightKg: 80 }).expect(400);
     });
 
     it("lista da mais recente pra mais antiga", async () => {
-      await cria(tokenA, { weightKg: 80, bodyFat: null, notes: null }).expect(
-        201,
-      );
-      await cria(tokenA, { weightKg: 81, bodyFat: null, notes: null }).expect(
-        201,
-      );
+      await cria(tokenA, corpo({ weightKg: 80 })).expect(201);
+      await cria(tokenA, corpo({ weightKg: 81 })).expect(201);
 
       const res = await lista(tokenA).expect(200);
 
@@ -566,7 +612,16 @@ describe("Progress (e2e)", () => {
       await request(app.getHttpServer())
         .post("/api/metrics")
         .set("Authorization", `Bearer ${tokenB}`)
-        .send({ weightKg: 95, bodyFat: null, notes: null })
+        .send({
+          weightKg: 95,
+          bodyFat: null,
+          leanMassKg: null,
+          waistCm: null,
+          armCm: null,
+          chestCm: null,
+          thighCm: null,
+          notes: null,
+        })
         .expect(201);
 
       const res = await request(app.getHttpServer())

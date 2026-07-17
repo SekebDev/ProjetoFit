@@ -10,6 +10,11 @@ interface MetricRow {
   date: Date;
   weightKg: number | null;
   bodyFat: number | null;
+  leanMassKg: number | null;
+  waistCm: number | null;
+  armCm: number | null;
+  chestCm: number | null;
+  thighCm: number | null;
   notes: string | null;
 }
 
@@ -19,6 +24,11 @@ function toMetric(row: MetricRow): BodyMetric {
     date: row.date.toISOString(),
     weightKg: row.weightKg,
     bodyFat: row.bodyFat,
+    leanMassKg: row.leanMassKg,
+    waistCm: row.waistCm,
+    armCm: row.armCm,
+    chestCm: row.chestCm,
+    thighCm: row.thighCm,
     notes: row.notes,
   };
 }
@@ -28,13 +38,12 @@ export class MetricsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(userId: string, input: CreateMetricInput): Promise<BodyMetric> {
+    // Spread e nao campo a campo (igual profile.service.ts:34): o input ja veio
+    // pelo ZodValidationPipe, e o z.object() descarta chave desconhecida — entao
+    // nao ha mass assignment a temer. Listar os campos a mao so criaria a chance
+    // de adicionar uma medida no schema e esquecer de grava-la aqui.
     const row = await this.prisma.bodyMetric.create({
-      data: {
-        userId,
-        weightKg: input.weightKg,
-        bodyFat: input.bodyFat,
-        notes: input.notes,
-      },
+      data: { userId, ...input },
     });
     return toMetric(row);
   }

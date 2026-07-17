@@ -7,26 +7,25 @@ import {
   MIN_BODY_WEIGHT_KG,
 } from "@workout/shared";
 import { useState } from "react";
+import { CampoNumero } from "@/components/CampoNumero";
 import { useCreateMetric } from "@/lib/hooks/useMetrics";
+import { numOrNull } from "@/lib/utils";
 
-/** "82,5" e "82.5" viram 82.5; vazio vira null. */
-function paraNumero(texto: string): number | null {
-  const limpo = texto.trim().replace(",", ".");
-  if (limpo === "") return null;
-  const n = Number(limpo);
-  return Number.isFinite(n) ? n : null;
-}
-
-const CAMPO =
-  "min-h-11 w-full rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 text-sm text-[var(--text)] outline-none transition-colors focus:border-[var(--muted-2)]";
-
+/**
+ * Registro rapido de peso, em /progress.
+ *
+ * So peso e gordura de proposito: quem esta olhando o grafico quer anotar a
+ * pesagem do dia em dois toques. A composicao inteira (massa magra, fita
+ * metrica) mora no BodyCompositionForm, na secao avancada do perfil — mesmo
+ * BodyMetric, ritmo diferente: a balanca e diaria, a fita nao.
+ */
 export function WeightForm() {
   const [peso, setPeso] = useState("");
   const [gordura, setGordura] = useState("");
   const criar = useCreateMetric();
 
-  const weightKg = paraNumero(peso);
-  const bodyFat = paraNumero(gordura);
+  const weightKg = numOrNull(peso);
+  const bodyFat = numOrNull(gordura);
   // O botao so libera com peso valido: gordura e opcional, mas registrar uma
   // pesagem sem peso nao faz sentido nenhum.
   const valido =
@@ -39,7 +38,18 @@ export function WeightForm() {
     e.preventDefault();
     if (!valido) return;
     criar.mutate(
-      { weightKg, bodyFat, notes: null },
+      {
+        weightKg,
+        bodyFat,
+        // Nulos explicitos: este form nao mede fita. Nao sao "esqueci", sao
+        // "nao medi hoje" — e o schema exige todo campo presente.
+        leanMassKg: null,
+        waistCm: null,
+        armCm: null,
+        chestCm: null,
+        thighCm: null,
+        notes: null,
+      },
       {
         onSuccess: () => {
           setPeso("");
@@ -52,38 +62,24 @@ export function WeightForm() {
   return (
     <form onSubmit={registra} className="flex flex-wrap items-end gap-2">
       <div className="min-w-24 flex-1">
-        <label
-          htmlFor="peso"
-          className="mb-1 block font-[family-name:var(--font-mono-face)] text-[10px] uppercase tracking-wider text-[var(--muted-2)]"
-        >
-          Peso (kg)
-        </label>
-        <input
+        <CampoNumero
           id="peso"
-          // decimal, nao number: no celular abre o teclado numerico com virgula
-          // e nao vem com as setinhas de incremento que ninguem usa.
-          inputMode="decimal"
+          label="Peso"
+          unidade="kg"
           value={peso}
-          onChange={(e) => setPeso(e.target.value)}
+          onChange={setPeso}
           placeholder="82,5"
-          className={CAMPO}
         />
       </div>
 
       <div className="min-w-24 flex-1">
-        <label
-          htmlFor="gordura"
-          className="mb-1 block font-[family-name:var(--font-mono-face)] text-[10px] uppercase tracking-wider text-[var(--muted-2)]"
-        >
-          Gordura (%)
-        </label>
-        <input
+        <CampoNumero
           id="gordura"
-          inputMode="decimal"
+          label="Gordura"
+          unidade="%"
           value={gordura}
-          onChange={(e) => setGordura(e.target.value)}
+          onChange={setGordura}
           placeholder="opcional"
-          className={CAMPO}
         />
       </div>
 
