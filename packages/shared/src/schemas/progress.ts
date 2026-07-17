@@ -90,3 +90,24 @@ export const ProgressSummarySchema = z.object({
   totalSessions: z.number().int(),
 });
 export type ProgressSummary = z.infer<typeof ProgressSummarySchema>;
+
+/**
+ * Sugestao de deload (GET /progress/deload).
+ *
+ * Combina dois gatilhos: FATIGUE = o volume da ultima semana completa caiu
+ * abaixo do limiar vs. a media recente; CYCLE = muitas semanas "pesadas"
+ * seguidas (periodizacao). BOTH = os dois ao mesmo tempo.
+ */
+export const DeloadSchema = z.object({
+  recommend: z.boolean(),
+  reason: z.enum(["FATIGUE", "CYCLE", "BOTH"]).nullable(),
+  /** Volume da ultima semana COMPLETA (a semana corrente em andamento nao conta). */
+  lastWeekVolume: z.number().nullable(),
+  /** Media das ultimas semanas treinadas, base da comparacao. */
+  baselineVolume: z.number().nullable(),
+  /** Quanto a ultima semana caiu vs. a base (0..1); null quando nao da pra medir. */
+  dropPct: z.number().nullable(),
+  /** Semanas "pesadas" consecutivas terminando na ultima. */
+  hardWeekStreak: z.number().int(),
+});
+export type Deload = z.infer<typeof DeloadSchema>;

@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Query, UseGuards } from "@nestjs/common";
 import {
   TimeZoneSchema,
+  type Deload,
   type ExerciseProgress,
   type ProgressSummary,
 } from "@workout/shared";
@@ -24,6 +25,15 @@ export class ProgressController {
     @Query("tz", new ZodValidationPipe(TimeZoneSchema)) tz: string,
   ): Promise<ProgressSummary> {
     return this.progress.summary(user.userId, tz);
+  }
+
+  /** Sugestao de deload (fadiga + ciclo) a partir do volume semanal. */
+  @Get("deload")
+  deload(
+    @CurrentUser() user: AuthUser,
+    @Query("tz", new ZodValidationPipe(TimeZoneSchema)) tz: string,
+  ): Promise<Deload> {
+    return this.progress.deload(user.userId, tz);
   }
 
   // O userId vem do JWT: o :id aqui e do exercicio (que e publico), mas as

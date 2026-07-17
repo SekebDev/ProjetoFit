@@ -1,5 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import type { ExerciseProgress, ProgressSummary } from "@workout/shared";
+import type {
+  Deload,
+  ExerciseProgress,
+  ProgressSummary,
+} from "@workout/shared";
 import { apiFetch } from "@/lib/api";
 
 /**
@@ -22,6 +26,15 @@ export function useProgressSummary() {
       apiFetch<ProgressSummary>(
         `/progress/summary?tz=${encodeURIComponent(tz)}`,
       ),
+  });
+}
+
+export function useDeload() {
+  const tz = fusoDoNavegador();
+  return useQuery({
+    queryKey: ["progress-deload", tz],
+    queryFn: () =>
+      apiFetch<Deload>(`/progress/deload?tz=${encodeURIComponent(tz)}`),
   });
 }
 

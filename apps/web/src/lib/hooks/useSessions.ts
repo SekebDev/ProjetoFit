@@ -100,6 +100,8 @@ export function useFinishSession(sessionId: string, planDayId: string) {
       void qc.invalidateQueries({ queryKey: ["sessions"] });
       void qc.invalidateQueries({ queryKey: ["progress-summary"] });
       void qc.invalidateQueries({ queryKey: ["progress-exercise"] });
+      // A sessao encerrada muda o volume da semana — reavalia o deload no dash.
+      void qc.invalidateQueries({ queryKey: ["progress-deload"] });
     },
   });
 }

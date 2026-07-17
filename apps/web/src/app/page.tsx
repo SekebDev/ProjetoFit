@@ -1,11 +1,58 @@
 "use client";
 
+import { BatteryLow } from "lucide-react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import type { Health } from "@workout/shared";
+import type { Deload, Health } from "@workout/shared";
 import { Mascot } from "@/components/Mascot";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useDeload } from "@/lib/hooks/useProgress";
+
+/** Texto da sugestao conforme o gatilho (fadiga, ciclo ou os dois). */
+function mensagemDeload(d: Deload): string {
+  const queda =
+    d.dropPct !== null ? ` (~${Math.round(d.dropPct * 100)}% a menos)` : "";
+  switch (d.reason) {
+    case "FATIGUE":
+      return `Seu volume caiu na última semana${queda}. Pode ser fadiga — vale uma semana mais leve.`;
+    case "CYCLE":
+      return `São ${d.hardWeekStreak} semanas pesadas seguidas. Um deload agora ajuda a recuperar e voltar mais forte.`;
+    case "BOTH":
+      return `Volume caindo${queda} depois de ${d.hardWeekStreak} semanas pesadas. Seu corpo está pedindo um deload.`;
+    default:
+      return "";
+  }
+}
+
+function DeloadBanner() {
+  const { user } = useAuth();
+  const { data } = useDeload();
+
+  if (!user || !data?.recommend) return null;
+
+  return (
+    <section
+      role="status"
+      className="mt-8 flex items-start gap-3 rounded-xl border border-[var(--m-arms)]/40 bg-[var(--m-arms)]/10 p-4"
+    >
+      <BatteryLow
+        size={20}
+        strokeWidth={2.5}
+        className="mt-0.5 shrink-0 text-[var(--m-arms)]"
+        aria-hidden
+      />
+      <div>
+        <p className="font-[family-name:var(--font-display-face)] text-sm font-bold">
+          Considere um deload
+        </p>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          {mensagemDeload(data)}
+        </p>
+      </div>
+    </section>
+  );
+}
 
 export default function Home() {
   const { user } = useAuth();
@@ -48,6 +95,8 @@ export default function Home() {
           className="mascot-float hidden shrink-0 sm:block"
         />
       </section>
+
+      <DeloadBanner />
 
       <section className="mt-12 grid gap-4 sm:grid-cols-3">
         <HubCard

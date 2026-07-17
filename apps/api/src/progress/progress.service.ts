@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import {
   SUMMARY_WEEKS,
+  type Deload,
   type ExercisePoint,
   type ExerciseProgress,
   type PersonalRecord,
@@ -8,6 +9,7 @@ import {
   type WeeklyVolume,
 } from "@workout/shared";
 import { PrismaService } from "../prisma/prisma.service";
+import { computeDeload } from "./deload";
 
 /** Teto de pontos no grafico de um exercicio. */
 const MAX_POINTS = 200;
@@ -128,6 +130,25 @@ export class ProgressService {
       }),
     ]);
     return { weeklyVolume, records, totalSessions };
+  }
+
+  /**
+   * Sugestao de deload a partir do volume semanal.
+   *
+   * Reusa o weeklyVolume (ja fatiado no fuso do usuario) e busca o inicio da
+   * semana corrente no MESMO fuso, pra computeDeload descartar a semana em
+   * andamento — comparar semana parcial com semanas inteiras sempre acusaria
+   * "queda".
+   */
+  async deload(userId: string, tz: string): Promise<Deload> {
+    const [weeks, [{ weekStart }]] = await Promise.all([
+      this.weeklyVolume(userId, tz),
+      this.prisma.$queryRaw<{ weekStart: Date }[]>`
+        SELECT (date_trunc('week', now() AT TIME ZONE ${tz}) AT TIME ZONE ${tz})
+               AS "weekStart"
+      `,
+    ]);
+    return computeDeload(weeks, weekStart.toISOString());
   }
 
   /**
