@@ -83,3 +83,14 @@ body {
 .mascot-float {
   animation: mascot-float 4s ease-in-out infinite;
 }
+
+/* Serie registrada: um pulso rapido de confirmacao (fica no compositor).
+   A entrada/saida da Rackie e o confete agora sao motion + canvas-confetti. */
+@keyframes set-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+.set-pop {
+  animation: set-pop 380ms ease-out;
+}

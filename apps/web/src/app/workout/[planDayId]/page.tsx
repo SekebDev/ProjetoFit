@@ -1,12 +1,15 @@
 "use client";
 
+import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { ArrowLeft, Flag } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { LastLoad, Session } from "@workout/shared";
 import { Mascot } from "@/components/Mascot";
 import { SetLogger } from "@/components/SetLogger";
+import { fireConfetti } from "@/lib/rackie/confetti";
+import { pickPhrase } from "@/lib/rackie/phrases";
 import { useAuth } from "@/lib/auth";
 import {
   useFinishSession,
@@ -56,6 +59,8 @@ function Treino({
   const [notas, setNotas] = useState("");
   const [confirmando, setConfirmando] = useState(false);
   const finish = useFinishSession(session.id, planDayId);
+  // Suaviza a troca entre o botao "Encerrar" e o formulario de confirmacao.
+  const [confirmRef] = useAutoAnimate<HTMLDivElement>();
 
   const dia = session.planDay;
   const encerrada = session.finishedAt !== null;
@@ -74,26 +79,7 @@ function Treino({
 
   if (encerrada) {
     return (
-      <main className="mx-auto max-w-2xl px-5 py-8">
-        <div className="flex flex-col items-center gap-3 rounded-xl border bg-[var(--surface)] py-12 text-center">
-          <Mascot state="cheer" size="md" />
-          <h1 className="font-[family-name:var(--font-display-face)] text-2xl font-bold">
-            Treino concluído
-          </h1>
-          <p className="font-[family-name:var(--font-mono-face)] text-sm text-[var(--muted)]">
-            {feitas} {feitas === 1 ? "série" : "séries"}
-            {session.durationSec !== null
-              ? ` · ${formataDuracao(session.durationSec)}`
-              : ""}
-          </p>
-          <Link
-            href="/plans"
-            className="mt-2 flex min-h-11 items-center rounded-md bg-[var(--chalk)] px-5 text-sm font-semibold text-black"
-          >
-            Voltar aos planos
-          </Link>
-        </div>
-      </main>
+      <TreinoConcluido feitas={feitas} durationSec={session.durationSec} />
     );
   }
 
@@ -130,7 +116,10 @@ function Treino({
         ))}
       </ul>
 
-      <div className="sticky bottom-[var(--bottom-nav-space)] mt-4 rounded-xl border bg-[var(--surface)]/95 p-3 backdrop-blur">
+      <div
+        ref={confirmRef}
+        className="sticky bottom-[var(--bottom-nav-space)] mt-4 rounded-xl border bg-[var(--surface)]/95 p-3 backdrop-blur"
+      >
         {confirmando ? (
           <div className="space-y-2">
             <label
@@ -181,6 +170,50 @@ function Treino({
             {finish.error.message}
           </p>
         ) : null}
+      </div>
+    </main>
+  );
+}
+
+/**
+ * Tela de treino concluido: a Rackie comemora com um estouro de particulas e
+ * uma frase de fechamento. A frase e sorteada uma vez (useState inicial) pra
+ * nao trocar a cada repaint enquanto a tela esta aberta.
+ */
+function TreinoConcluido({
+  feitas,
+  durationSec,
+}: {
+  feitas: number;
+  durationSec: number | null;
+}) {
+  const [frase] = useState(() => pickPhrase("day"));
+
+  // Comemora uma vez ao montar a tela de conclusao.
+  useEffect(() => {
+    fireConfetti("day");
+  }, []);
+
+  return (
+    <main className="mx-auto max-w-2xl px-5 py-8">
+      <div className="flex flex-col items-center gap-3 rounded-xl border bg-[var(--surface)] py-12 text-center">
+        <Mascot state="cheer" size="md" />
+        <h1 className="font-[family-name:var(--font-display-face)] text-2xl font-bold">
+          Treino concluído
+        </h1>
+        <p className="font-[family-name:var(--font-mono-face)] text-sm text-[var(--muted)]">
+          {feitas} {feitas === 1 ? "série" : "séries"}
+          {durationSec !== null ? ` · ${formataDuracao(durationSec)}` : ""}
+        </p>
+        <p className="max-w-xs font-[family-name:var(--font-display-face)] text-base font-bold text-[var(--text)]">
+          {frase}
+        </p>
+        <Link
+          href="/plans"
+          className="mt-2 flex min-h-11 items-center rounded-md bg-[var(--chalk)] px-5 text-sm font-semibold text-black"
+        >
+          Voltar aos planos
+        </Link>
       </div>
     </main>
   );
