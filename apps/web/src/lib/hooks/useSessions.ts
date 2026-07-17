@@ -17,6 +17,21 @@ export function useSessionHistory() {
 }
 
 /**
+ * A sessao em aberto do usuario (ou null) — o que deixa o painel oferecer
+ * "continuar treino". `enabled` fica a cargo de quem chama: sem usuario logado
+ * nao ha o que buscar.
+ */
+export function useActiveSession() {
+  return useQuery({
+    queryKey: ["session-active"],
+    queryFn: () => apiFetch<Session | null>("/sessions/active"),
+    // staleTime: 0 sobrepondo os 30s globais: quem inicia um treino e volta pro
+    // painel precisa ver o "continuar" na hora, nao o null cacheado de antes.
+    staleTime: 0,
+  });
+}
+
+/**
  * A sessao do dia, criando se ainda nao existir.
  *
  * useQuery num POST parece torto, mas o POST /sessions e idempotente de
@@ -92,6 +107,8 @@ export function useFinishSession(sessionId: string, planDayId: string) {
       }),
     onSuccess: (session) => {
       qc.setQueryData(["session", planDayId], session);
+      // A sessao fechou: some do "continuar treino" do painel.
+      void qc.invalidateQueries({ queryKey: ["session-active"] });
       // A sessao virou historico: agora ela conta como "ultima carga".
       void qc.invalidateQueries({ queryKey: ["last-loads", planDayId] });
       // ...e so agora ela entra no /history e nos graficos, porque os dois so

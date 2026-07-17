@@ -39,6 +39,13 @@ export class SessionsController {
     return this.sessions.findAll(user.userId);
   }
 
+  // Assim como "last-loads", precisa vir antes de qualquer rota com :id, senao
+  // o Nest casaria "active" como se fosse um id de sessao.
+  @Get("active")
+  activeSession(@CurrentUser() user: AuthUser): Promise<Session | null> {
+    return this.sessions.activeSession(user.userId);
+  }
+
   // Precisa vir antes de qualquer rota com :id, senao o Nest casaria
   // "last-loads" como se fosse um id de sessao.
   @Get("last-loads")

@@ -252,6 +252,23 @@ export class SessionsService {
     });
   }
 
+  /**
+   * A sessao em aberto do usuario, se houver — o que permite ao painel oferecer
+   * "continuar treino" sem o usuario ter que reencontrar a URL exata do dia.
+   *
+   * `date desc` pelo mesmo motivo do start: no READ COMMITTED dois POSTs
+   * simultaneos podem deixar duas sessoes abertas; a mais recente vence, pra nao
+   * cair na vazia e perder de vista as series ja registradas.
+   */
+  async activeSession(userId: string): Promise<Session | null> {
+    const row = await this.prisma.workoutSession.findFirst({
+      where: { userId, finishedAt: null },
+      orderBy: { date: "desc" },
+      include: SESSION_INCLUDE,
+    });
+    return row ? toSession(row as SessionRow) : null;
+  }
+
   async findAll(userId: string): Promise<SessionSummary[]> {
     const rows = await this.prisma.workoutSession.findMany({
       where: { userId },

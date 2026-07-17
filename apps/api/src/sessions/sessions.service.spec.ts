@@ -439,6 +439,52 @@ describe("SessionsService", () => {
     });
   });
 
+  describe("activeSession", () => {
+    it("devolve null quando nao ha sessao em aberto", async () => {
+      const findFirst = vi.fn().mockResolvedValue(null);
+      const service = new SessionsService(
+        fakePrisma({ workoutSession: { findFirst } }),
+      );
+
+      await expect(service.activeSession("u1")).resolves.toBeNull();
+    });
+
+    it("procura a sessao aberta do proprio usuario, a mais recente", async () => {
+      const findFirst = vi.fn().mockResolvedValue(null);
+      const service = new SessionsService(
+        fakePrisma({ workoutSession: { findFirst } }),
+      );
+
+      await service.activeSession("u1");
+
+      expect(findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: "u1", finishedAt: null },
+          orderBy: { date: "desc" },
+        }),
+      );
+    });
+
+    it("devolve a sessao com a prescricao e as series pra tela retomar", async () => {
+      const service = new SessionsService(
+        fakePrisma({
+          workoutSession: {
+            findFirst: vi
+              .fn()
+              .mockResolvedValue({ ...sessionRow, setLogs: [setLogRow] }),
+          },
+        }),
+      );
+
+      const session = await service.activeSession("u1");
+
+      expect(session?.id).toBe("s1");
+      expect(session?.finishedAt).toBeNull();
+      expect(session?.planDay?.name).toBe("Push");
+      expect(session?.setLogs).toHaveLength(1);
+    });
+  });
+
   describe("findAll", () => {
     it("lista apenas as sessoes do proprio usuario, recentes primeiro", async () => {
       const findMany = vi.fn().mockResolvedValue([]);
