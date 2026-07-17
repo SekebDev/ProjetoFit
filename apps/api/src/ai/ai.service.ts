@@ -43,6 +43,9 @@ Monte um plano de treino seguro e eficaz seguindo estas regras:
 - Se o usuário for "RETURNING", aplique readaptação: comece com volume moderado.
 - Considere lesões informadas e evite exercícios de risco pra elas.
 - Distribua o volume de forma coerente entre os dias.
+- Agende cada dia num dia da semana no campo "weekday" (1=segunda ... 7=domingo),
+  espalhando os treinos pela semana e respeitando os dias/semana do perfil. Use
+  null só se realmente não fizer sentido fixar um dia.
 - repScheme deve ser "8" ou um intervalo como "8-12". Nunca use texto livre.
 - restSec em segundos, entre 0 e 600.
 - Escreva os nomes dos dias, o foco e o resumo em português do Brasil.

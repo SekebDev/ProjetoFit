@@ -47,6 +47,7 @@ function planoValido(over: Partial<AiPlan> = {}): AiPlan {
       {
         name: "Push",
         focus: "Peito",
+        weekday: 1,
         exercises: [
           {
             slug: "supino_reto",
@@ -69,6 +70,7 @@ function planoComIdInventado(): AiPlan {
       {
         name: "Push",
         focus: "Peito",
+        weekday: 1,
         exercises: [
           {
             slug: "nao-existe",
@@ -270,6 +272,7 @@ describe("AiService", () => {
           {
             name: "Push",
             focus: "Peito",
+            weekday: 1,
             exercises: [
               {
                 slug: "supino_reto",

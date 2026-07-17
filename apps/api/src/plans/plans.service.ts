@@ -32,6 +32,7 @@ function buildDaysCreate(input: CreatePlanInput) {
       name: day.name,
       focus: day.focus,
       order: dayIndex,
+      weekday: day.weekday,
       exercises: {
         create: day.exercises.map((pe, exIndex) => ({
           exerciseId: pe.exerciseId,

@@ -81,6 +81,10 @@ model PlanDay {
   name      String // "Push", "Pull"
   focus     String?
   order     Int
+  // Dia da semana agendado (ISO 1=segunda .. 7=domingo), ou null = sem dia fixo.
+  // O painel usa isto pra sugerir o "proximo treino"; nullable de proposito,
+  // porque nem todo plano se prende a um calendario.
+  weekday   Int?
   exercises PlanExercise[]
   sessions  WorkoutSession[]
 

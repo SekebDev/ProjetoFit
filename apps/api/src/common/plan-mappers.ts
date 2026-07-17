@@ -22,6 +22,7 @@ export interface PlanDayRow {
   name: string;
   focus: string | null;
   order: number;
+  weekday: number | null;
   exercises: {
     id: string;
     order: number;
@@ -64,6 +65,7 @@ export function toPlanDay(row: PlanDayRow): PlanDay {
     name: row.name,
     focus: row.focus,
     order: row.order,
+    weekday: row.weekday,
     exercises: row.exercises.map((pe) => ({
       id: pe.id,
       order: pe.order,

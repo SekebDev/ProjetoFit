@@ -23,8 +23,20 @@ interface DraftDay {
   key: string;
   name: string;
   focus: string;
+  weekday: number | null;
   exercises: DraftExercise[];
 }
+
+/** ISO 1=segunda .. 7=domingo, na ordem em que aparecem no seletor. */
+const WEEKDAYS: { value: number; label: string }[] = [
+  { value: 1, label: "Seg" },
+  { value: 2, label: "Ter" },
+  { value: 3, label: "Qua" },
+  { value: 4, label: "Qui" },
+  { value: 5, label: "Sex" },
+  { value: 6, label: "Sáb" },
+  { value: 7, label: "Dom" },
+];
 
 interface Props {
   initial?: Plan | null;
@@ -76,7 +88,13 @@ function primeiroProblema(days: DraftDay[]): string | null {
 }
 
 function emptyDay(index: number): DraftDay {
-  return { key: uid(), name: `Dia ${index + 1}`, focus: "", exercises: [] };
+  return {
+    key: uid(),
+    name: `Dia ${index + 1}`,
+    focus: "",
+    weekday: null,
+    exercises: [],
+  };
 }
 
 /** Plan (servidor) -> rascunho local. */
@@ -85,6 +103,7 @@ function toDraft(plan: Plan): DraftDay[] {
     key: day.id,
     name: day.name,
     focus: day.focus ?? "",
+    weekday: day.weekday,
     exercises: day.exercises.map((pe) => ({
       key: pe.id,
       exercise: pe.exercise,
@@ -171,6 +190,7 @@ export function PlanEditor({
       days: days.map((d) => ({
         name: d.name.trim(),
         focus: d.focus.trim() || null,
+        weekday: d.weekday,
         exercises: d.exercises.map((ex) => ({
           exerciseId: ex.exercise.id,
           sets: ex.sets,
@@ -374,6 +394,11 @@ function DayCard({
             />
           </div>
 
+          <WeekdayPicker
+            value={day.weekday}
+            onChange={(weekday) => onPatch({ weekday })}
+          />
+
           {day.exercises.map((ex) => (
             <ExerciseRow
               key={ex.key}
@@ -452,6 +477,47 @@ function ExerciseRow({
             className="min-h-10 w-full rounded border bg-[var(--surface)] px-2 text-center font-[family-name:var(--font-mono-face)] text-sm tabular-nums focus:border-[var(--muted)]"
           />
         </MiniField>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Seletor de dia da semana do treino. Clicar no dia ja marcado desmarca (volta
+ * pra "sem dia fixo") — assim nao precisa de um botao "limpar" separado.
+ */
+function WeekdayPicker({
+  value,
+  onChange,
+}: {
+  value: number | null;
+  onChange: (weekday: number | null) => void;
+}) {
+  return (
+    <div>
+      <span className="mb-1.5 block font-[family-name:var(--font-mono-face)] text-[10px] uppercase tracking-wider text-[var(--muted-2)]">
+        Dia da semana
+      </span>
+      <div className="grid grid-cols-7 gap-1" role="group" aria-label="Dia da semana">
+        {WEEKDAYS.map((d) => {
+          const active = value === d.value;
+          return (
+            <button
+              key={d.value}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onChange(active ? null : d.value)}
+              className={cn(
+                "min-h-10 rounded border text-xs font-medium transition-colors",
+                active
+                  ? "border-[var(--chalk)] bg-[var(--chalk)] text-black"
+                  : "border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--text)]",
+              )}
+            >
+              {d.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

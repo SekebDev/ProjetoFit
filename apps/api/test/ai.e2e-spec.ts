@@ -39,6 +39,7 @@ function planoDaIA(slug: string): AiPlan {
       {
         name: "Push",
         focus: "Peito",
+        weekday: 1,
         exercises: [
           { slug, sets: 3, repScheme: "8-12", restSec: 120, notes: null },
         ],

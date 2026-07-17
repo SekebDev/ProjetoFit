@@ -66,6 +66,7 @@ describe("Plans (e2e)", () => {
         {
           name: "Push",
           focus: "Peito e ombro",
+          weekday: 1,
           exercises: [
             {
               exerciseId,
@@ -79,6 +80,7 @@ describe("Plans (e2e)", () => {
         {
           name: "Pull",
           focus: null,
+          weekday: 3,
           exercises: [
             { exerciseId, sets: 4, repScheme: "10", restSec: 90, notes: null },
           ],
@@ -119,6 +121,10 @@ describe("Plans (e2e)", () => {
       ]);
       expect(res.body.days[0].name).toBe("Push");
       expect(res.body.days[0].exercises[0].exercise.name).toBe("Supino reto");
+      // O dia da semana agendado sobrevive a ida e volta ao Postgres.
+      expect(res.body.days.map((d: { weekday: number | null }) => d.weekday)).toEqual(
+        [1, 3],
+      );
     });
 
     it("rejeita corpo invalido com 400", async () => {
@@ -141,6 +147,7 @@ describe("Plans (e2e)", () => {
             {
               name: "D",
               focus: null,
+              weekday: null,
               exercises: [
                 {
                   exerciseId: "nao-existe-123",
@@ -166,6 +173,7 @@ describe("Plans (e2e)", () => {
             {
               name: "Push",
               focus: null,
+              weekday: null,
               exercises: [
                 {
                   exerciseId,
@@ -287,6 +295,7 @@ describe("Plans (e2e)", () => {
             {
               name: "Dia unico",
               focus: null,
+              weekday: null,
               exercises: [
                 {
                   exerciseId,

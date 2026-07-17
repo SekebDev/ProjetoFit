@@ -33,6 +33,7 @@ const planRow = {
       name: "Push",
       focus: null,
       order: 0,
+      weekday: null,
       exercises: [
         {
           id: "pe1",
@@ -57,6 +58,7 @@ const input: CreatePlanInput = {
     {
       name: "Push",
       focus: null,
+      weekday: null,
       exercises: [
         {
           exerciseId: "e1",
@@ -71,6 +73,7 @@ const input: CreatePlanInput = {
     {
       name: "Pull",
       focus: null,
+      weekday: null,
       exercises: [
         { exerciseId: "e3", sets: 3, repScheme: "8", restSec: 90, notes: null },
       ],

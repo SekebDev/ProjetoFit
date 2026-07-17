@@ -28,6 +28,8 @@ export type PlanExerciseInput = z.infer<typeof PlanExerciseInputSchema>;
 export const PlanDayInputSchema = z.object({
   name: z.string().min(1).max(60),
   focus: z.string().max(60).nullable(),
+  // Dia da semana agendado (ISO 1=segunda .. 7=domingo), ou null = sem dia fixo.
+  weekday: z.number().int().min(1).max(7).nullable(),
   exercises: z.array(PlanExerciseInputSchema).min(1).max(MAX_EXERCISES_PER_DAY),
 });
 export type PlanDayInput = z.infer<typeof PlanDayInputSchema>;
@@ -63,6 +65,8 @@ export const PlanDaySchema = z.object({
   name: z.string(),
   focus: z.string().nullable(),
   order: z.number().int(),
+  // ISO 1=segunda .. 7=domingo, ou null = sem dia agendado.
+  weekday: z.number().int().nullable(),
   exercises: z.array(PlanExerciseSchema),
 });
 export type PlanDay = z.infer<typeof PlanDaySchema>;

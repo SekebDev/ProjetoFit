@@ -36,6 +36,12 @@ export const AiExerciseSchema = z.object({
 export const AiDaySchema = z.object({
   name: z.string(),
   focus: z.string(),
+  /**
+   * Dia da semana (ISO 1=segunda .. 7=domingo), ou null. Sem `.min()`/`.max()`
+   * de proposito, igual aos numeros acima: structured outputs so restringe
+   * forma, nao valor. O aiPlanToCreateInput normaliza o que vier fora do range.
+   */
+  weekday: z.number().nullable(),
   exercises: z.array(AiExerciseSchema),
 });
 
@@ -45,6 +51,11 @@ export const AiPlanSchema = z.object({
   days: z.array(AiDaySchema),
 });
 export type AiPlan = z.infer<typeof AiPlanSchema>;
+
+/** ISO 1=segunda .. 7=domingo. Qualquer outra coisa nao e um dia agendado. */
+function ehWeekdayValido(v: number | null): v is number {
+  return v !== null && Number.isInteger(v) && v >= 1 && v <= 7;
+}
 
 /**
  * Plano da IA -> entrada do editor manual.
@@ -70,6 +81,10 @@ export function aiPlanToCreateInput(
       // A IA sempre manda focus (required em structured outputs); o plano aceita
       // null. String vazia vira null pra nao gravar "" como se fosse um foco.
       focus: d.focus.trim() || null,
+      // Normaliza o dia da semana: structured outputs nao restringe valor, entao
+      // um 0 ou 8 pode vir. Fora de 1..7 (ou nao inteiro) vira "sem dia fixo" em
+      // vez de derrubar o plano inteiro na validacao por um detalhe de agenda.
+      weekday: ehWeekdayValido(d.weekday) ? d.weekday : null,
       exercises: d.exercises.map((e) => ({
         // O `?? e.slug` nunca cai: quem chama isto ja validou que todo slug esta
         // no mapa. O fallback existe so pra satisfazer o tipo (get devolve

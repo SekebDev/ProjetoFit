@@ -51,6 +51,7 @@ describe("Sessions (e2e)", () => {
           {
             name: "Push",
             focus: null,
+            weekday: null,
             exercises: [
               {
                 exerciseId,
