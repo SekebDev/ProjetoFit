@@ -109,6 +109,8 @@ export function useFinishSession(sessionId: string, planDayId: string) {
       qc.setQueryData(["session", planDayId], session);
       // A sessao fechou: some do "continuar treino" do painel.
       void qc.invalidateQueries({ queryKey: ["session-active"] });
+      // ...e, se foi o treino de hoje, o painel avanca pro proximo dia agendado.
+      void qc.invalidateQueries({ queryKey: ["next-workout"] });
       // A sessao virou historico: agora ela conta como "ultima carga".
       void qc.invalidateQueries({ queryKey: ["last-loads", planDayId] });
       // ...e so agora ela entra no /history e nos graficos, porque os dois so

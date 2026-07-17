@@ -5,12 +5,14 @@ import {
 } from "@nestjs/common";
 import type {
   CreatePlanInput,
+  NextWorkout,
   Plan,
   PlanSummary,
   UpdatePlanInput,
 } from "@workout/shared";
 import { toPlan, type PlanRow } from "../common/plan-mappers";
 import { PrismaService } from "../prisma/prisma.service";
+import { pickNextWorkout } from "./next-workout";
 
 /** Traz o plano inteiro: dias ordenados, exercicios ordenados, com o Exercise. */
 const PLAN_INCLUDE = {
@@ -89,6 +91,65 @@ export class PlansService {
       createdAt: row.createdAt.toISOString(),
       dayCount: row._count.days,
     }));
+  }
+
+  /**
+   * O proximo treino sugerido para o painel, a partir do plano ATIVO e dos dias
+   * agendados por dia da semana. Null quando nao ha plano ativo ou quando nenhum
+   * dia tem `weekday` (plano sem agenda). O `tz` vem do cliente porque so ele
+   * sabe o fuso — o mesmo motivo dos endpoints de /progress.
+   *
+   * Duas queries cruas de tempo, no fuso do usuario: o dia da semana de hoje
+   * (ISODOW 1=segunda..7=domingo) e os planDay que ele ja encerrou HOJE — este
+   * ultimo faz o painel avancar para o proximo treino em vez de reoferecer o que
+   * acabou de ser feito. O `AT TIME ZONE 'UTC'` afirma que a coluna sem fuso e
+   * UTC antes de converter pro local (mesma dobra usada em progress.service).
+   */
+  async nextWorkout(userId: string, tz: string): Promise<NextWorkout | null> {
+    const plan = await this.prisma.workoutPlan.findFirst({
+      where: { userId, isActive: true },
+      select: {
+        id: true,
+        name: true,
+        days: {
+          orderBy: { order: "asc" },
+          select: { id: true, name: true, focus: true, weekday: true },
+        },
+      },
+    });
+    if (!plan) return null;
+
+    const [[{ weekday }], finished] = await Promise.all([
+      this.prisma.$queryRaw<{ weekday: number }[]>`
+        SELECT EXTRACT(ISODOW FROM (now() AT TIME ZONE ${tz}))::int AS "weekday"
+      `,
+      this.prisma.$queryRaw<{ planDayId: string }[]>`
+        SELECT DISTINCT s."planDayId" AS "planDayId"
+        FROM "WorkoutSession" s
+        WHERE s."userId" = ${userId}
+          AND s."finishedAt" IS NOT NULL
+          AND s."planDayId" IS NOT NULL
+          AND date_trunc('day', (s."finishedAt" AT TIME ZONE 'UTC') AT TIME ZONE ${tz})
+              = date_trunc('day', now() AT TIME ZONE ${tz})
+      `,
+    ]);
+
+    const escolha = pickNextWorkout(
+      plan.days,
+      weekday,
+      finished.map((f) => f.planDayId),
+    );
+    if (!escolha) return null;
+
+    return {
+      planId: plan.id,
+      planName: plan.name,
+      planDayId: escolha.day.id,
+      name: escolha.day.name,
+      focus: escolha.day.focus,
+      weekday: escolha.day.weekday,
+      isToday: escolha.isToday,
+    };
   }
 
   async findOne(userId: string, id: string): Promise<Plan> {

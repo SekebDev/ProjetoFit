@@ -98,6 +98,72 @@ describe("Plans (e2e)", () => {
     await app.close();
   });
 
+  describe("GET /plans/next-workout", () => {
+    // ISO 1..7 de hoje em UTC — o mesmo fuso que mandamos na query, pra o teste
+    // ser deterministico independente de quando roda.
+    const isoHoje = (() => {
+      const d = new Date().getUTCDay(); // 0=domingo..6=sabado
+      return d === 0 ? 7 : d;
+    })();
+    const isoOutro = (isoHoje % 7) + 1; // um dia qualquer != hoje
+
+    let token = "";
+
+    beforeAll(async () => {
+      token = await register(`next-${Date.now()}@teste.local`);
+    });
+
+    function diaAgendado(name: string, weekday: number) {
+      return {
+        name,
+        focus: null,
+        weekday,
+        exercises: [
+          { exerciseId, sets: 3, repScheme: "8-12", restSec: 120, notes: null },
+        ],
+      };
+    }
+
+    it("devolve vazio quando nao ha plano ativo", async () => {
+      const res = await request(app.getHttpServer())
+        .get("/api/plans/next-workout?tz=UTC")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      expect(res.body.planDayId).toBeUndefined();
+    });
+
+    it("sugere o dia agendado para hoje, com isToday", async () => {
+      const created = await request(app.getHttpServer())
+        .post("/api/plans")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          name: "Semana",
+          notes: null,
+          days: [diaAgendado("Fora", isoOutro), diaAgendado("Hoje", isoHoje)],
+        })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .put(`/api/plans/${created.body.id}/activate`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      const res = await request(app.getHttpServer())
+        .get("/api/plans/next-workout?tz=UTC")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      expect(res.body.name).toBe("Hoje");
+      expect(res.body.isToday).toBe(true);
+      expect(res.body.weekday).toBe(isoHoje);
+      const diaHoje = created.body.days.find(
+        (d: { name: string }) => d.name === "Hoje",
+      );
+      expect(res.body.planDayId).toBe(diaHoje.id);
+    });
+  });
+
   describe("autenticacao", () => {
     it("recusa a listagem sem token", async () => {
       await request(app.getHttpServer()).get("/api/plans").expect(401);

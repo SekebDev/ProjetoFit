@@ -141,6 +141,56 @@ describe("Sessions (e2e)", () => {
     await prisma.workoutSession.deleteMany();
   });
 
+  describe("GET /sessions/active", () => {
+    it("devolve vazio quando nao ha sessao em aberto", async () => {
+      const res = await request(app.getHttpServer())
+        .get("/api/sessions/active")
+        .set("Authorization", `Bearer ${tokenA}`)
+        .expect(200);
+
+      expect(res.body.id).toBeUndefined();
+    });
+
+    it("devolve a sessao em aberto pra retomar do painel", async () => {
+      const criada = await iniciaSessao(tokenA, planDayA).expect(200);
+
+      const res = await request(app.getHttpServer())
+        .get("/api/sessions/active")
+        .set("Authorization", `Bearer ${tokenA}`)
+        .expect(200);
+
+      expect(res.body.id).toBe(criada.body.id);
+      expect(res.body.planDayId).toBe(planDayA);
+    });
+
+    it("volta a ficar vazio depois de encerrar", async () => {
+      const criada = await iniciaSessao(tokenA, planDayA).expect(200);
+      await request(app.getHttpServer())
+        .patch(`/api/sessions/${criada.body.id}/finish`)
+        .set("Authorization", `Bearer ${tokenA}`)
+        .send({ notes: null })
+        .expect(200);
+
+      const res = await request(app.getHttpServer())
+        .get("/api/sessions/active")
+        .set("Authorization", `Bearer ${tokenA}`)
+        .expect(200);
+
+      expect(res.body.id).toBeUndefined();
+    });
+
+    it("nao vaza a sessao em aberto de outro usuario", async () => {
+      await iniciaSessao(tokenA, planDayA).expect(200);
+
+      const res = await request(app.getHttpServer())
+        .get("/api/sessions/active")
+        .set("Authorization", `Bearer ${tokenB}`)
+        .expect(200);
+
+      expect(res.body.id).toBeUndefined();
+    });
+  });
+
   describe("POST /sessions", () => {
     it("abre uma sessao com finishedAt null", async () => {
       const res = await iniciaSessao(tokenA, planDayA).expect(200);

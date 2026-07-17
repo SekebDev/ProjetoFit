@@ -82,6 +82,25 @@ export const PlanSchema = z.object({
 });
 export type Plan = z.infer<typeof PlanSchema>;
 
+/**
+ * GET /plans/next-workout — o proximo treino sugerido no painel.
+ *
+ * Compacto de proposito: o painel so precisa saber para onde mandar o usuario
+ * (planDayId) e como rotular o card. A tela de treino busca a prescricao inteira
+ * sozinha ao abrir /workout/[planDayId].
+ */
+export const NextWorkoutSchema = z.object({
+  planId: z.string(),
+  planName: z.string(),
+  planDayId: z.string(),
+  name: z.string(),
+  focus: z.string().nullable(),
+  weekday: z.number().int().nullable(),
+  /** true = o dia agendado e o de hoje; false = e um treino futuro. */
+  isToday: z.boolean(),
+});
+export type NextWorkout = z.infer<typeof NextWorkoutSchema>;
+
 /** Item da lista GET /plans — sem os dias, so o resumo. */
 export const PlanSummarySchema = z.object({
   id: z.string(),

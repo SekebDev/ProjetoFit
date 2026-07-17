@@ -7,12 +7,15 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UseGuards,
 } from "@nestjs/common";
 import {
   CreatePlanSchema,
+  TimeZoneSchema,
   UpdatePlanSchema,
   type CreatePlanInput,
+  type NextWorkout,
   type Plan,
   type PlanSummary,
   type UpdatePlanInput,
@@ -32,6 +35,16 @@ export class PlansController {
   @Get()
   findAll(@CurrentUser() user: AuthUser): Promise<PlanSummary[]> {
     return this.plans.findAll(user.userId);
+  }
+
+  // Precisa vir antes de @Get(":id"), senao o Nest casaria "next-workout" como
+  // se fosse um id de plano.
+  @Get("next-workout")
+  nextWorkout(
+    @CurrentUser() user: AuthUser,
+    @Query("tz", new ZodValidationPipe(TimeZoneSchema)) tz: string,
+  ): Promise<NextWorkout | null> {
+    return this.plans.nextWorkout(user.userId, tz);
   }
 
   @Get(":id")

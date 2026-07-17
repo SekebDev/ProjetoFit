@@ -1,13 +1,235 @@
 "use client";
 
-import { BatteryLow } from "lucide-react";
+import { BatteryLow, Flame, Play, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import type { Deload, Health } from "@workout/shared";
+import type {
+  Deload,
+  Health,
+  NextWorkout,
+  PlanSummary,
+  Session,
+} from "@workout/shared";
 import { Mascot } from "@/components/Mascot";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useDeload } from "@/lib/hooks/useProgress";
+import { useNextWorkout, usePlans } from "@/lib/hooks/usePlans";
+import { useActiveSession } from "@/lib/hooks/useSessions";
+
+/** ISO 1=segunda .. 7=domingo. O indice 0 fica vazio de proposito. */
+const WEEKDAY_LABELS = [
+  "",
+  "Segunda",
+  "Terça",
+  "Quarta",
+  "Quinta",
+  "Sexta",
+  "Sábado",
+  "Domingo",
+];
+
+export default function Home() {
+  const { user, loading } = useAuth();
+
+  if (loading) return <PainelEsqueleto />;
+  return user ? <Painel /> : <Vitrine />;
+}
+
+/* ------------------------------------------------------------------ */
+/* Painel (logado): o centro do app                                    */
+/* ------------------------------------------------------------------ */
+
+function Painel() {
+  const { user } = useAuth();
+  const nome = user?.name ?? user?.email ?? "";
+
+  return (
+    <main className="mx-auto max-w-2xl px-5 py-8 pb-[var(--bottom-nav-space)]">
+      <header>
+        <p className="font-[family-name:var(--font-mono-face)] text-[11px] uppercase tracking-widest text-[var(--muted-2)]">
+          Seu treino
+        </p>
+        <h1 className="mt-1 font-[family-name:var(--font-display-face)] text-3xl font-bold tracking-tight">
+          Olá, {nome}
+        </h1>
+      </header>
+
+      <div className="mt-6 space-y-4">
+        <CardPrincipal />
+        <SlotSequencia />
+        <BannerDeload />
+      </div>
+
+      <Atalhos />
+    </main>
+  );
+}
+
+/**
+ * O card que manda o usuario treinar. Prioridade:
+ * 1. sessao em aberto -> retomar de onde parou;
+ * 2. proximo treino agendado -> iniciar o dia;
+ * 3. sem sugestao -> guiar a criar/agendar um plano.
+ */
+function CardPrincipal() {
+  const active = useActiveSession();
+  const next = useNextWorkout();
+  const plans = usePlans();
+
+  if (active.data) return <CardRetomar session={active.data} />;
+  if (active.isLoading || next.isLoading) return <CardSkeleton />;
+  if (next.data) return <CardProximo next={next.data} />;
+
+  return <CardSemTreino plans={plans.data ?? []} />;
+}
+
+function CardRetomar({ session }: { session: Session }) {
+  const nome = session.planDay?.name ?? "Treino";
+  const feitas = session.setLogs.length;
+
+  // planDayId null: o plano foi editado no meio da sessao (FK SetNull). Nao ha
+  // pra onde retomar a prescricao, entao mandamos pro historico em vez de um
+  // link quebrado.
+  if (!session.planDayId) {
+    return (
+      <div className="rounded-xl border border-[var(--m-arms)]/40 bg-[var(--m-arms)]/10 p-5">
+        <Eyebrow>Em andamento</Eyebrow>
+        <h2 className="mt-1 font-[family-name:var(--font-display-face)] text-2xl font-bold">
+          {nome}
+        </h2>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          O plano mudou depois que este treino começou.{" "}
+          <Link href="/history" className="underline">
+            Ver no histórico
+          </Link>
+          .
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={`/workout/${session.planDayId}`}
+      className="group block rounded-xl border border-[var(--m-legs)]/50 bg-[var(--m-legs)]/10 p-5 transition-colors hover:border-[var(--m-legs)]"
+    >
+      <Eyebrow>Em andamento</Eyebrow>
+      <h2 className="mt-1 font-[family-name:var(--font-display-face)] text-2xl font-bold">
+        {nome}
+      </h2>
+      <p className="mt-1 text-sm text-[var(--muted)]">
+        {feitas} {feitas === 1 ? "série registrada" : "séries registradas"}
+      </p>
+      <span className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md bg-[var(--m-legs)] px-4 text-sm font-semibold text-white">
+        <RotateCcw size={16} strokeWidth={2.5} aria-hidden />
+        Retomar treino
+      </span>
+    </Link>
+  );
+}
+
+function CardProximo({ next }: { next: NextWorkout }) {
+  const quando = next.isToday
+    ? "Hoje"
+    : next.weekday
+      ? WEEKDAY_LABELS[next.weekday]
+      : "Próximo";
+
+  return (
+    <Link
+      href={`/workout/${next.planDayId}`}
+      className="group block rounded-xl border bg-[var(--surface)] p-5 transition-colors hover:border-[var(--chalk)]"
+    >
+      <Eyebrow>{quando} · próximo treino</Eyebrow>
+      <h2 className="mt-1 font-[family-name:var(--font-display-face)] text-2xl font-bold">
+        {next.name}
+      </h2>
+      {next.focus ? (
+        <p className="mt-1 text-sm text-[var(--muted)]">{next.focus}</p>
+      ) : null}
+      <span className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md bg-[var(--chalk)] px-4 text-sm font-semibold text-black transition-opacity group-hover:opacity-90">
+        <Play size={16} strokeWidth={2.5} aria-hidden />
+        Iniciar dia
+      </span>
+    </Link>
+  );
+}
+
+function CardSemTreino({ plans }: { plans: PlanSummary[] }) {
+  const ativo = plans.find((p) => p.isActive);
+
+  // Plano ativo existe, mas sem dias agendados: mandar pro editor pra marcar os
+  // dias da semana. Sem plano ativo: criar/ativar um.
+  const { titulo, texto, href, cta } = ativo
+    ? {
+        titulo: "Agende seus treinos",
+        texto: "Seu plano ativo ainda não tem dias marcados na semana.",
+        href: `/plans/${ativo.id}`,
+        cta: "Agendar dias",
+      }
+    : {
+        titulo: "Comece por um plano",
+        texto: "Crie ou ative um plano para o painel montar sua semana.",
+        href: "/plans",
+        cta: "Ver planos",
+      };
+
+  return (
+    <div className="rounded-xl border border-dashed bg-[var(--surface)] p-5">
+      <h2 className="font-[family-name:var(--font-display-face)] text-xl font-bold">
+        {titulo}
+      </h2>
+      <p className="mt-1 text-sm text-[var(--muted)]">{texto}</p>
+      <Link
+        href={href}
+        className="mt-4 inline-flex min-h-11 items-center rounded-md bg-[var(--chalk)] px-4 text-sm font-semibold text-black"
+      >
+        {cta}
+      </Link>
+    </div>
+  );
+}
+
+/** Slot da sequência (streak). Placeholder honesto — a lógica vem na Fase 7. */
+function SlotSequencia() {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-dashed p-4">
+      <Flame size={20} className="shrink-0 text-[var(--muted-2)]" aria-hidden />
+      <div>
+        <p className="text-sm font-semibold text-[var(--muted)]">Sequência</p>
+        <p className="font-[family-name:var(--font-mono-face)] text-xs text-[var(--muted-2)]">
+          Em breve: acompanhe seus dias seguidos de treino.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function BannerDeload() {
+  const { data } = useDeload();
+  if (!data?.recommend) return null;
+
+  return (
+    <section
+      role="status"
+      className="flex items-start gap-3 rounded-xl border border-[var(--m-arms)]/40 bg-[var(--m-arms)]/10 p-4"
+    >
+      <BatteryLow
+        size={20}
+        strokeWidth={2.5}
+        className="mt-0.5 shrink-0 text-[var(--m-arms)]"
+        aria-hidden
+      />
+      <div>
+        <p className="font-[family-name:var(--font-display-face)] text-sm font-bold">
+          Considere um deload
+        </p>
+        <p className="mt-1 text-sm text-[var(--muted)]">{mensagemDeload(data)}</p>
+      </div>
+    </section>
+  );
+}
 
 /** Texto da sugestao conforme o gatilho (fadiga, ciclo ou os dois). */
 function mensagemDeload(d: Deload): string {
@@ -25,37 +247,55 @@ function mensagemDeload(d: Deload): string {
   }
 }
 
-function DeloadBanner() {
-  const { user } = useAuth();
-  const { data } = useDeload();
-
-  if (!user || !data?.recommend) return null;
-
+/** Atalhos secundarios — pequenos de proposito: a navegacao principal e a barra. */
+function Atalhos() {
   return (
-    <section
-      role="status"
-      className="mt-8 flex items-start gap-3 rounded-xl border border-[var(--m-arms)]/40 bg-[var(--m-arms)]/10 p-4"
-    >
-      <BatteryLow
-        size={20}
-        strokeWidth={2.5}
-        className="mt-0.5 shrink-0 text-[var(--m-arms)]"
-        aria-hidden
-      />
-      <div>
-        <p className="font-[family-name:var(--font-display-face)] text-sm font-bold">
-          Considere um deload
-        </p>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          {mensagemDeload(data)}
-        </p>
-      </div>
-    </section>
+    <nav className="mt-8 flex flex-wrap gap-2">
+      {[
+        { href: "/plans", label: "Planos" },
+        { href: "/progress", label: "Progresso" },
+        { href: "/exercises", label: "Biblioteca" },
+      ].map((a) => (
+        <Link
+          key={a.href}
+          href={a.href}
+          className="rounded-md border px-3 py-1.5 text-sm text-[var(--muted)] transition-colors hover:border-[var(--muted-2)] hover:text-[var(--text)]"
+        >
+          {a.label}
+        </Link>
+      ))}
+    </nav>
   );
 }
 
-export default function Home() {
-  const { user } = useAuth();
+function Eyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="font-[family-name:var(--font-mono-face)] text-[11px] uppercase tracking-widest text-[var(--muted-2)]">
+      {children}
+    </span>
+  );
+}
+
+function CardSkeleton() {
+  return (
+    <div className="h-44 animate-pulse rounded-xl border bg-[var(--surface)]" />
+  );
+}
+
+function PainelEsqueleto() {
+  return (
+    <main className="mx-auto max-w-2xl space-y-4 px-5 py-8">
+      <div className="h-10 w-48 animate-pulse rounded-md bg-[var(--surface)]" />
+      <CardSkeleton />
+    </main>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Vitrine (deslogado): a landing                                      */
+/* ------------------------------------------------------------------ */
+
+function Vitrine() {
   const { data: health } = useQuery<Health>({
     queryKey: ["health"],
     queryFn: () => apiFetch<Health>("/health"),
@@ -83,10 +323,23 @@ export default function Home() {
             <span className="text-[var(--muted)]">metodo.</span>
           </h1>
           <p className="mt-4 text-[var(--muted)]">
-            {user
-              ? `Bem-vindo de volta, ${user.name ?? user.email}.`
-              : "Biblioteca de exercicios, registro de progressao e planos gerados por IA a partir do seu perfil."}
+            Biblioteca de exercicios, registro de progressao e planos gerados por
+            IA a partir do seu perfil.
           </p>
+          <div className="mt-6 flex gap-3">
+            <Link
+              href="/login"
+              className="inline-flex min-h-11 items-center rounded-md bg-[var(--chalk)] px-5 text-sm font-semibold text-black transition-opacity hover:opacity-90"
+            >
+              Entrar
+            </Link>
+            <Link
+              href="/exercises"
+              className="inline-flex min-h-11 items-center rounded-md border px-5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--surface-2)]"
+            >
+              Ver biblioteca
+            </Link>
+          </div>
         </div>
 
         <Mascot
@@ -95,63 +348,6 @@ export default function Home() {
           className="mascot-float hidden shrink-0 sm:block"
         />
       </section>
-
-      <DeloadBanner />
-
-      <section className="mt-12 grid gap-4 sm:grid-cols-3">
-        <HubCard
-          href="/exercises"
-          eyebrow="873 exercicios"
-          title="Biblioteca"
-          color="var(--m-back)"
-        />
-        <HubCard
-          href="/profile"
-          eyebrow="Sua ficha"
-          title="Perfil"
-          color="var(--m-arms)"
-        />
-        <HubCard
-          href={user ? "/exercises" : "/login"}
-          eyebrow={user ? "Continuar" : "Comecar"}
-          title={user ? "Treinar" : "Entrar"}
-          color="var(--m-legs)"
-        />
-      </section>
     </main>
-  );
-}
-
-function HubCard({
-  href,
-  eyebrow,
-  title,
-  color,
-}: {
-  href: string;
-  eyebrow: string;
-  title: string;
-  color: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group relative overflow-hidden rounded-xl border bg-[var(--surface)] p-5 transition-colors hover:border-[var(--muted-2)]"
-    >
-      <span
-        aria-hidden
-        className="absolute left-0 top-0 h-full w-1"
-        style={{ background: color }}
-      />
-      <p className="font-[family-name:var(--font-mono-face)] text-[11px] uppercase tracking-widest text-[var(--muted-2)]">
-        {eyebrow}
-      </p>
-      <p className="mt-2 font-[family-name:var(--font-display-face)] text-xl font-semibold">
-        {title}
-      </p>
-      <span className="mt-6 inline-block text-[var(--muted)] transition-transform group-hover:translate-x-1">
-        &rarr;
-      </span>
-    </Link>
   );
 }
