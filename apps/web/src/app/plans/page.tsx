@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Plus, Trash2 } from "lucide-react";
+import { Check, Plus, Sparkles, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import type { PlanSummary } from "@workout/shared";
@@ -24,14 +24,26 @@ export default function PlansPage() {
             Planos
           </h1>
         </div>
+        {/* O /generate nao cabe na barra de baixo (5 abas ja e o teto pra manter
+            os alvos acima de 44px), e este e o lugar onde alguem procura quando
+            quer um plano — ao lado de criar um na mao. */}
         {user ? (
-          <Link
-            href="/plans/new"
-            className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-md bg-[var(--chalk)] px-4 text-sm font-semibold text-black transition-opacity hover:opacity-90"
-          >
-            <Plus size={16} strokeWidth={2.5} aria-hidden />
-            Novo
-          </Link>
+          <div className="flex shrink-0 gap-2">
+            <Link
+              href="/generate"
+              className="flex min-h-11 items-center gap-1.5 rounded-md border px-3 text-sm font-medium text-[var(--muted)] transition-colors hover:border-[var(--muted-2)] hover:text-[var(--text)]"
+            >
+              <Sparkles size={15} aria-hidden />
+              Gerar por IA
+            </Link>
+            <Link
+              href="/plans/new"
+              className="flex min-h-11 items-center gap-1.5 rounded-md bg-[var(--chalk)] px-4 text-sm font-semibold text-black transition-opacity hover:opacity-90"
+            >
+              <Plus size={16} strokeWidth={2.5} aria-hidden />
+              Novo
+            </Link>
+          </div>
         ) : null}
       </header>
 
@@ -142,14 +154,23 @@ function Empty() {
     <div className="flex flex-col items-center gap-3 py-14 text-center">
       <Mascot state="idle" size="md" />
       <p className="text-sm text-[var(--muted)]">
-        Nenhum plano ainda. Monte o primeiro.
+        Nenhum plano ainda. Monte o primeiro — ou deixe a IA montar.
       </p>
-      <Link
-        href="/plans/new"
-        className="mt-1 flex min-h-11 items-center rounded-md bg-[var(--chalk)] px-5 text-sm font-semibold text-black"
-      >
-        Criar plano
-      </Link>
+      <div className="mt-1 flex flex-wrap justify-center gap-2">
+        <Link
+          href="/generate"
+          className="flex min-h-11 items-center gap-1.5 rounded-md bg-[var(--chalk)] px-5 text-sm font-semibold text-black"
+        >
+          <Sparkles size={15} aria-hidden />
+          Gerar por IA
+        </Link>
+        <Link
+          href="/plans/new"
+          className="flex min-h-11 items-center rounded-md border px-5 text-sm font-medium text-[var(--muted)] transition-colors hover:border-[var(--muted-2)] hover:text-[var(--text)]"
+        >
+          Criar na mão
+        </Link>
+      </div>
     </div>
   );
 }

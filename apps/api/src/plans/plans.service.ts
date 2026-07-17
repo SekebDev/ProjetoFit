@@ -103,14 +103,23 @@ export class PlansService {
     return toPlan(row as PlanRow);
   }
 
-  async create(userId: string, input: CreatePlanInput): Promise<Plan> {
+  /**
+   * `source` com default MANUAL: o AiService chama isto com "AI" pra reusar a
+   * mesma persistencia (assertExercisesExist, buildDaysCreate, o mapper) em vez
+   * de duplica-la. As chamadas que ja existiam nao mudam.
+   */
+  async create(
+    userId: string,
+    input: CreatePlanInput,
+    source: PlanSummary["source"] = "MANUAL",
+  ): Promise<Plan> {
     await assertExercisesExist(this.prisma, input);
     const row = await this.prisma.workoutPlan.create({
       data: {
         userId,
         name: input.name,
         notes: input.notes,
-        source: "MANUAL",
+        source,
         days: buildDaysCreate(input),
       },
       include: PLAN_INCLUDE,

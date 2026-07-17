@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { AiModule } from "./ai/ai.module";
 import { AuthModule } from "./auth/auth.module";
 import { ExercisesModule } from "./exercises/exercises.module";
 import { HealthModule } from "./health/health.module";
@@ -22,6 +23,7 @@ import { SessionsModule } from "./sessions/sessions.module";
     SessionsModule,
     ProgressModule,
     MetricsModule,
+    AiModule,
   ],
 })
 export class AppModule {}

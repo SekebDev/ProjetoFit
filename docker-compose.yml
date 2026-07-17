@@ -25,12 +25,19 @@ services:
       context: .
       dockerfile: docker/dev.Dockerfile
     command: sh -c "pnpm --filter @workout/shared build && pnpm --filter @workout/api prisma:generate && pnpm --filter @workout/api exec prisma migrate deploy && pnpm --filter @workout/api dev"
+    # A OPENAI_API_KEY vem daqui: e o mesmo arquivo que o app le fora do docker,
+    # entao a chave fica num lugar so. required:false pra clone limpo sem .env
+    # ainda subir (a geracao por IA so degrada pra 503). As vars de `environment`
+    # abaixo tem precedencia sobre este arquivo — DATABASE_URL, por exemplo, tem
+    # que ser db:5432 dentro do container, nao o localhost:5433 do .env.
+    env_file:
+      - path: ./apps/api/.env
+        required: false
     environment:
       DATABASE_URL: postgresql://workout:workout@db:5432/workout?schema=public
       # dev only — em produção o JWT_SECRET vem do ambiente (docker-compose.prod.yml)
       JWT_SECRET: dev-secret-change-me-0123456789abcdef0123456789
       JWT_EXPIRES_IN: 7d
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       PORT: "3001"
       WEB_ORIGIN: http://localhost:3000
       # bind mount do Windows nao propaga inotify: polling e obrigatorio p/ hot-reload

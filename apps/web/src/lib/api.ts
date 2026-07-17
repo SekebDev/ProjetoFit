@@ -34,6 +34,25 @@ function errorMessage(body: ApiErrorBody | null, status: number): string {
   return `${base} (${first.path.join(".")}: ${first.message})`;
 }
 
+/**
+ * Erro de API com o status preservado.
+ *
+ * Estende Error de proposito: todo `catch` que so le `.message` continua
+ * funcionando. O `status` existe porque algumas telas precisam distinguir o
+ * motivo — a geracao por IA responde 503 quando a chave nao esta configurada e
+ * 429 quando o limite estourou, e as duas coisas pedem textos diferentes de um
+ * "algo deu errado" generico.
+ */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 /** Cliente HTTP central. A chave da OpenAI NUNCA passa por aqui — só pelo Nest. */
 export async function apiFetch<T>(
   path: string,
@@ -51,7 +70,7 @@ export async function apiFetch<T>(
 
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
-    throw new Error(errorMessage(body, res.status));
+    throw new ApiError(errorMessage(body, res.status), res.status);
   }
 
   if (res.status === 204) return undefined as T;
