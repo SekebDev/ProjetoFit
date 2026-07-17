@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start -p 3000",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
+    "lint": "eslint . --ignore-pattern \"public/sw.js\" --ignore-pattern \"public/swe-worker-*.js\"",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -22,12 +22,14 @@
   },
   "devDependencies": {
     "@playwright/test": "1.57.0",
+    "@serwist/next": "9.5.11",
     "@tailwindcss/postcss": "4.3.2",
     "@types/node": "22.20.1",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "eslint": "9.39.5",
     "eslint-config-next": "16.2.10",
+    "serwist": "9.5.11",
     "tailwindcss": "4.3.2",
     "typescript": "5.9.3"
   }

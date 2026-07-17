@@ -8,6 +8,11 @@ dist/
 out/
 *.tsbuildinfo
 
+# serwist (service worker gerado no build)
+apps/web/public/sw.js
+apps/web/public/sw.js.map
+apps/web/public/swe-worker-*.js
+
 # env / secrets
 .env
 .env.local
@@ -27,3 +32,5 @@ blob-report/
 *.log
 .DS_Store
 Thumbs.db
+
+graphify-out

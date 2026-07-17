@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
 import type { ReactNode } from "react";
 import { Nav } from "@/components/Nav";
@@ -24,6 +24,21 @@ const mono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "ProjetoFit — RACK",
   description: "App de treino pessoal: biblioteca, progressao e planos por IA",
+  applicationName: "RACK",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "RACK",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: "/icon-192.png",
+    apple: "/icon-192.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0e1014",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

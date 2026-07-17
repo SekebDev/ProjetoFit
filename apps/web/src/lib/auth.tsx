@@ -74,6 +74,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function logout(): void {
     setToken(null);
     setUser(null);
+    // O SW (sw.ts) cacheia GETs autenticados de /api em "api-get" pra consultar
+    // o treino offline. Sem apagar aqui, os dados pessoais continuariam legiveis
+    // offline apos o logout. Best-effort: se o Cache API nao existir, ignora.
+    if (typeof window !== "undefined" && "caches" in window) {
+      void window.caches.delete("api-get");
+    }
   }
 
   return (
