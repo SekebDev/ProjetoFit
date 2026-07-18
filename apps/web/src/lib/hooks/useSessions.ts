@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
+  FinishSessionResult,
   LastLoad,
   LogSetInput,
   Session,
@@ -7,6 +8,7 @@ import type {
   SetLog,
 } from "@workout/shared";
 import { apiFetch } from "@/lib/api";
+import { fusoDoNavegador } from "@/lib/timezone";
 
 /** Historico de sessoes, da mais recente pra mais antiga (a tela /history). */
 export function useSessionHistory() {
@@ -101,11 +103,13 @@ export function useFinishSession(sessionId: string, planDayId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (notes: string | null) =>
-      apiFetch<Session>(`/sessions/${sessionId}/finish`, {
+      apiFetch<FinishSessionResult>(`/sessions/${sessionId}/finish`, {
         method: "PATCH",
-        body: JSON.stringify({ notes }),
+        // O tz vai junto porque fechar o treino concede XP, e o multiplicador
+        // sai da sequencia — que so faz sentido no fuso de quem treinou.
+        body: JSON.stringify({ notes, tz: fusoDoNavegador() }),
       }),
-    onSuccess: (session) => {
+    onSuccess: ({ session }) => {
       qc.setQueryData(["session", planDayId], session);
       // A sessao fechou: some do "continuar treino" do painel.
       void qc.invalidateQueries({ queryKey: ["session-active"] });
@@ -123,6 +127,10 @@ export function useFinishSession(sessionId: string, planDayId: string) {
       void qc.invalidateQueries({ queryKey: ["progress-deload"] });
       // ...e cumpre (ou repoe) o dia agendado: a sequencia do painel sobe.
       void qc.invalidateQueries({ queryKey: ["progress-streak"] });
+      // O treino pagou XP e pode ter desbloqueado conquista: a barra do painel e
+      // a tela de conquistas precisam refletir isso.
+      void qc.invalidateQueries({ queryKey: ["game"] });
+      void qc.invalidateQueries({ queryKey: ["game-achievements"] });
     },
   });
 }

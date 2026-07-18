@@ -100,6 +100,40 @@ function comemoraDia(): void {
   emojiWave(["💪", "🔥", "🐔"], 16);
 }
 
+/**
+ * Subiu de nivel: chuva a partir do topo, pra soar diferente de tudo o resto.
+ * E o marco mais alto da gamificacao, entao ganha a leva de estrelas.
+ */
+function comemoraNivel(): void {
+  void confetti({
+    particleCount: 90,
+    spread: 160,
+    startVelocity: 30,
+    gravity: 0.9,
+    ticks: 220,
+    origin: { x: 0.5, y: 0 },
+    colors: CORES,
+    zIndex: Z,
+    disableForReducedMotion: true,
+  });
+  emojiWave(["⭐", "🔥"], 16);
+}
+
+/** Conquista: estouro medio no centro com a medalha. */
+function comemoraConquista(): void {
+  void confetti({
+    particleCount: 55,
+    spread: 100,
+    startVelocity: 35,
+    ticks: 160,
+    origin: { x: 0.5, y: 0.55 },
+    colors: CORES,
+    zIndex: Z,
+    disableForReducedMotion: true,
+  });
+  emojiWave(["🏅", "⭐"], 12);
+}
+
 /** Dispara o confete do contexto. No-op sob prefers-reduced-motion. */
 export function fireConfetti(context: RackieContext): void {
   if (reduzido()) return;
@@ -112,6 +146,12 @@ export function fireConfetti(context: RackieContext): void {
       break;
     case "set":
       popSerie();
+      break;
+    case "levelUp":
+      comemoraNivel();
+      break;
+    case "achievement":
+      comemoraConquista();
       break;
     case "rest":
       // Descanso nao estoura confete — a Rackie so protege a recuperacao.

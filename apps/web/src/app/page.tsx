@@ -10,6 +10,7 @@ import type {
   PlanSummary,
   Session,
 } from "@workout/shared";
+import { BarraXp } from "@/components/game/BarraXp";
 import { Mascot } from "@/components/Mascot";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -59,6 +60,7 @@ function Painel() {
       <div className="mt-6 space-y-4">
         <CardPrincipal />
         <CardSequencia />
+        <BarraXp />
         <BannerDeload />
       </div>
 

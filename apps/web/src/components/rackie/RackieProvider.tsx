@@ -30,6 +30,8 @@ const APRESENTACAO: Record<
   pr: { state: "cheer", announce: true, burst: true },
   day: { state: "cheer", announce: true, burst: true },
   rest: { state: "rest", announce: false, burst: false },
+  levelUp: { state: "cheer", announce: true, burst: true },
+  achievement: { state: "cheer", announce: true, burst: true },
 };
 
 interface Fala {

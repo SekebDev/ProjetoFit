@@ -5,11 +5,11 @@ import { ArrowLeft, Flag } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { LastLoad, Session } from "@workout/shared";
+import type { LastLoad, Session, SessionReward } from "@workout/shared";
 import { Mascot } from "@/components/Mascot";
 import { SetLogger } from "@/components/SetLogger";
 import { fireConfetti } from "@/lib/rackie/confetti";
-import { pickPhrase } from "@/lib/rackie/phrases";
+import { pickPhrase, type RackieContext } from "@/lib/rackie/phrases";
 import { useAuth } from "@/lib/auth";
 import {
   useFinishSession,
@@ -79,7 +79,13 @@ function Treino({
 
   if (encerrada) {
     return (
-      <TreinoConcluido feitas={feitas} durationSec={session.durationSec} />
+      <TreinoConcluido
+        feitas={feitas}
+        durationSec={session.durationSec}
+        // Só existe no fechamento desta sessão nesta aba. Recarregar a página
+        // cai no null, e a tela mostra a conclusão sem o placar de XP.
+        reward={finish.data?.reward ?? null}
+      />
     );
   }
 
@@ -176,23 +182,41 @@ function Treino({
 }
 
 /**
+ * O momento mais alto que este treino rendeu.
+ *
+ * Um so, de proposito: subir de nivel E desbloquear conquista E fechar o dia
+ * disparando tres comemoracoes juntas viraria bagunca visual. Vence o mais raro.
+ */
+function contextoDaComemoracao(reward: SessionReward | null): RackieContext {
+  if (reward?.leveledUp) return "levelUp";
+  if (reward && reward.unlocked.length > 0) return "achievement";
+  return "day";
+}
+
+/**
  * Tela de treino concluido: a Rackie comemora com um estouro de particulas e
  * uma frase de fechamento. A frase e sorteada uma vez (useState inicial) pra
  * nao trocar a cada repaint enquanto a tela esta aberta.
+ *
+ * `reward` e null quando a tela remonta sobre uma sessao ja encerrada (recarga
+ * da pagina): nao da pra saber o que aquele treino pagou, entao ela nao inventa.
  */
 function TreinoConcluido({
   feitas,
   durationSec,
+  reward,
 }: {
   feitas: number;
   durationSec: number | null;
+  reward: SessionReward | null;
 }) {
-  const [frase] = useState(() => pickPhrase("day"));
+  const contexto = contextoDaComemoracao(reward);
+  const [frase] = useState(() => pickPhrase(contexto));
 
   // Comemora uma vez ao montar a tela de conclusao.
   useEffect(() => {
-    fireConfetti("day");
-  }, []);
+    fireConfetti(contexto);
+  }, [contexto]);
 
   return (
     <main className="mx-auto max-w-2xl px-5 py-8">
@@ -208,6 +232,9 @@ function TreinoConcluido({
         <p className="max-w-xs font-[family-name:var(--font-display-face)] text-base font-bold text-[var(--text)]">
           {frase}
         </p>
+
+        {reward ? <Recompensa reward={reward} /> : null}
+
         <Link
           href="/plans"
           className="mt-2 flex min-h-11 items-center rounded-md bg-[var(--chalk)] px-5 text-sm font-semibold text-black"
@@ -216,6 +243,52 @@ function TreinoConcluido({
         </Link>
       </div>
     </main>
+  );
+}
+
+/** XP ganho, nivel novo e conquistas — o placar do treino. */
+function Recompensa({ reward }: { reward: SessionReward }) {
+  const bonus = Math.round(reward.streakBonus * 100);
+
+  return (
+    <div className="mt-1 flex w-full max-w-xs flex-col items-center gap-2">
+      <p className="font-[family-name:var(--font-display-face)] text-3xl font-bold tabular-nums text-[var(--m-shoulders)]">
+        +{reward.xpGained} XP
+      </p>
+
+      {bonus > 0 ? (
+        <p className="font-[family-name:var(--font-mono-face)] text-[11px] text-[var(--muted-2)]">
+          inclui +{bonus}% da sua sequência
+        </p>
+      ) : null}
+
+      {reward.leveledUp ? (
+        <p className="rounded-md bg-[var(--m-shoulders)]/15 px-3 py-1.5 text-sm font-semibold text-[var(--m-shoulders)]">
+          Nível {reward.levelAfter} alcançado!
+        </p>
+      ) : null}
+
+      {reward.unlocked.length > 0 ? (
+        <ul className="mt-1 w-full space-y-1.5">
+          {reward.unlocked.map((a) => (
+            <li
+              key={a.code}
+              className="flex items-center gap-2 rounded-md border border-[var(--m-shoulders)]/40 bg-[var(--m-shoulders)]/10 px-3 py-2 text-left"
+            >
+              <span aria-hidden className="text-lg leading-none">
+                {a.icon}
+              </span>
+              <span className="min-w-0 flex-1 text-sm font-semibold">
+                {a.name}
+              </span>
+              <span className="shrink-0 font-[family-name:var(--font-mono-face)] text-[11px] text-[var(--muted-2)]">
+                +{a.xpReward}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }
 

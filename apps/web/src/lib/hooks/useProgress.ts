@@ -6,16 +6,7 @@ import type {
   Streak,
 } from "@workout/shared";
 import { apiFetch } from "@/lib/api";
-
-/**
- * O fuso do navegador — o servidor nao tem como adivinhar.
- *
- * Sem mandar isto, as semanas do grafico sairiam fatiadas no fuso do servidor e
- * um treino de domingo a noite apareceria na semana seguinte.
- */
-function fusoDoNavegador(): string {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone;
-}
+import { fusoDoNavegador } from "@/lib/timezone";
 
 export function useProgressSummary() {
   const tz = fusoDoNavegador();

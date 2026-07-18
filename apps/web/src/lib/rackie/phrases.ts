@@ -9,7 +9,13 @@
  */
 
 /** Em que momento a Rackie fala. Cada contexto tem seu tom. */
-export type RackieContext = "set" | "pr" | "day" | "rest";
+export type RackieContext =
+  | "set"
+  | "pr"
+  | "day"
+  | "rest"
+  | "levelUp"
+  | "achievement";
 
 const POOLS: Record<RackieContext, readonly string[]> = {
   // Serie comum concluida: zoacao leve + empurrao pra proxima.
@@ -47,6 +53,22 @@ const POOLS: Record<RackieContext, readonly string[]> = {
     "Descanso também é treino, não inventa moda.",
     "Respira, bebe água. O peso não vai fugir.",
     "Calma, campeão. Recuperar é parte do jogo.",
+  ],
+  // Subiu de nivel: o momento mais alto da gamificacao.
+  levelUp: [
+    "SUBIU DE NÍVEL! Tá evoluindo, monstro.",
+    "Nível novo! O frango tá virando outra coisa.",
+    "LEVEL UP! Agora é outro patamar.",
+    "Subiu de nível na marra. Merecido demais.",
+    "Nível novo desbloqueado. Vou ter que te respeitar.",
+  ],
+  // Conquista desbloqueada: orgulho com zoacao na medida.
+  achievement: [
+    "CONQUISTA NOVA! Coloca na estante.",
+    "Desbloqueou uma medalha, hein. Tá se achando (com razão).",
+    "Conquista na conta! Agora tem prova do que fez.",
+    "Isso aí vale troféu. Guarda com carinho.",
+    "Mais uma conquista. Tá colecionando, frango.",
   ],
 };
 
