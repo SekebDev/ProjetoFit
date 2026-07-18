@@ -240,6 +240,34 @@ describe("Game (e2e)", () => {
       expect(game.body.level).toBe(2);
     });
 
+    it("registra na sessao quanto ela pagou de XP", async () => {
+      // O total em GameProfile.xp nao se recorta por periodo. Sem este registro
+      // por sessao, o leaderboard dos grupos nao consegue somar "XP da semana".
+      const sessionId = await iniciaComSeries([SERIE, SERIE]);
+
+      const fim = await encerra(sessionId).expect(200);
+
+      const sessao = await prisma.workoutSession.findUniqueOrThrow({
+        where: { id: sessionId },
+        select: { xpGained: true },
+      });
+      expect(sessao.xpGained).toBe(fim.body.reward.xpGained);
+      expect(sessao.xpGained).toBeGreaterThan(0);
+    });
+
+    it("nao regrava o XP da sessao no retry do finish", async () => {
+      const sessionId = await iniciaComSeries([SERIE, SERIE]);
+
+      const primeira = await encerra(sessionId).expect(200);
+      await encerra(sessionId).expect(200);
+
+      const sessao = await prisma.workoutSession.findUniqueOrThrow({
+        where: { id: sessionId },
+        select: { xpGained: true },
+      });
+      expect(sessao.xpGained).toBe(primeira.body.reward.xpGained);
+    });
+
     it("NAO paga o mesmo treino duas vezes", async () => {
       const sessionId = await iniciaComSeries([SERIE, SERIE]);
 

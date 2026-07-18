@@ -20,6 +20,8 @@ model User {
   metrics      BodyMetric[]
   game         GameProfile?
   achievements UserAchievement[]
+  ownedGroups  Group[]           @relation("GroupOwner")
+  memberships  GroupMember[]
 }
 
 model Profile {
@@ -127,6 +129,15 @@ model WorkoutSession {
   finishedAt  DateTime?
   durationSec Int?
   notes       String?
+  // Quanto este treino pagou de XP (ja incluindo o bonus das conquistas).
+  //
+  // O total acumulado vive em GameProfile.xp, mas ele nao se recorta por
+  // periodo: sem registrar por sessao nao ha como responder "quanto de XP na
+  // semana", que e a metrica padrao do leaderboard dos grupos.
+  //
+  // 0 nas sessoes anteriores a esta coluna. Por isso o periodo "geral" do
+  // leaderboard le GameProfile.xp, e so semana/mes somam daqui.
+  xpGained    Int       @default(0)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   setLogs     SetLog[]
@@ -241,6 +252,49 @@ model Achievement {
   icon        String
   xpReward    Int               @default(0)
   users       UserAchievement[]
+}
+
+/**
+ * Grupo de treino: onde a competicao acontece.
+ *
+ * Primeira entidade do app compartilhada entre usuarios. Ate aqui todo dado
+ * pertencia a um dono e a autorizacao era um `where: { userId }`; a partir daqui
+ * um usuario le legitimamente numeros de outro, e o que autoriza e a associacao
+ * (GroupMember), nunca o id do grupo sozinho.
+ */
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  // Codigo curto que os outros digitam pra entrar. Unico pra o join poder
+  // resolver o grupo so com ele, e sorteado com crypto (nunca Math.random):
+  // adivinhar um codigo e entrar num grupo alheio.
+  inviteCode  String   @unique
+  ownerId     String
+  // Cascade: apagar a conta leva junto os grupos que ela criou. A sucessao de
+  // dono existe pra quem SAI do grupo (o service passa a posse adiante); apagar
+  // a conta inteira e outra coisa, e ai o grupo vai junto.
+  owner       User     @relation("GroupOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  members     GroupMember[]
+}
+
+model GroupMember {
+  id       String   @id @default(cuid())
+  groupId  String
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     String   @default("MEMBER") // OWNER | MEMBER
+  joinedAt DateTime @default(now())
+
+  // O banco e a autoridade contra entrar duas vezes no mesmo grupo — dois POST
+  // /groups/join simultaneos com o mesmo codigo nao conseguem duplicar a linha.
+  @@unique([groupId, userId])
+  // "os membros do grupo X" — a consulta do detalhe e do leaderboard.
+  @@index([groupId])
+  // "os grupos do usuario X" — a consulta da tela /groups.
+  @@index([userId])
 }
 
 model UserAchievement {

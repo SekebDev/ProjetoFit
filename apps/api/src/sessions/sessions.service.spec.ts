@@ -523,10 +523,14 @@ describe("SessionsService", () => {
       expect(reward).toBeNull();
     });
 
-    it("apura o XP DEPOIS de gravar o fim da sessao", async () => {
-      // A ordem importa: a sequencia que multiplica o XP le sessoes encerradas.
-      // Apurando antes do update, o treino de hoje nao contaria e o
-      // multiplicador sairia um dia atrasado.
+    it("fecha, apura o XP e so entao registra o que pagou", async () => {
+      // A ordem importa nas duas pontas:
+      //
+      // 1. a apuracao vem DEPOIS do primeiro update porque a sequencia que
+      //    multiplica o XP le sessoes encerradas — antes dele o treino de hoje
+      //    nao contaria e o multiplicador sairia um dia atrasado;
+      // 2. o segundo update vem DEPOIS da apuracao porque e ela que produz o
+      //    xpGained gravado na sessao (a soma por periodo do leaderboard).
       const ordem: string[] = [];
       const service = makeService(
         fakePrisma({
@@ -549,7 +553,7 @@ describe("SessionsService", () => {
 
       await service.finish("u1", "s1", { notes: null, tz: TZ });
 
-      expect(ordem).toEqual(["update", "xp"]);
+      expect(ordem).toEqual(["update", "xp", "update"]);
     });
   });
 

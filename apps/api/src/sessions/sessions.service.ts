@@ -267,6 +267,20 @@ export class SessionsService {
           ? await this.game.applyForSession(tx, userId, sessionId, input.tz)
           : null;
 
+        // Segundo update de proposito, e nao um campo a mais no primeiro: o XP
+        // so existe depois da apuracao, que por sua vez precisa rodar depois de
+        // gravar o finishedAt. A ordem e a mesma corrente de sempre — fecha,
+        // apura, registra o que pagou.
+        //
+        // O campo nao entra no Session devolvido: quem le e o leaderboard dos
+        // grupos, somando XP por periodo. A UI ja tem o valor no `reward`.
+        if (reward) {
+          await tx.workoutSession.update({
+            where: { id: sessionId },
+            data: { xpGained: reward.xpGained },
+          });
+        }
+
         return { session: toSession(row as SessionRow), reward };
       },
       // Acima dos 5s padrao: a transacao agora inclui a apuracao de XP, com a

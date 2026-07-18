@@ -9,7 +9,7 @@ import { CurrentUser, type AuthUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { AiService } from "./ai.service";
-import { UserThrottlerGuard } from "./user-throttler.guard";
+import { UserThrottlerGuard } from "../common/user-throttler.guard";
 
 /** 5 geracoes por hora. Ver o comentario no @Throttle abaixo. */
 const LIMITE = 5;

@@ -5,17 +5,20 @@ import type { AuthUser } from "../auth/current-user.decorator";
 /**
  * Throttle por USUARIO, nao por IP.
  *
- * O ThrottlerGuard padrao rastreia por `req.ip`. Isso quebra de dois jeitos
- * neste endpoint:
+ * O ThrottlerGuard padrao rastreia por `req.ip`. Isso quebra de dois jeitos:
  *
  * 1. Em producao atras de proxy ou NAT, todos os usuarios compartilham um IP —
- *    um usuario que gera 5 planos bloquearia todo mundo.
+ *    um usuario que estoura o limite bloquearia todo mundo.
  * 2. Em dev, o navegador e os testes saem do mesmo IP, entao o limite se
  *    esgota entre sessoes que deveriam ser independentes.
  *
- * O JwtAuthGuard (aplicado antes deste no controller) ja populou
+ * O JwtAuthGuard (aplicado antes deste nos controllers) ja populou
  * `request.user`, entao da pra chavear pelo userId. Fallback pro IP so pra nao
- * quebrar caso a rota fosse desprotegida um dia — hoje ela nunca e.
+ * quebrar caso a rota fosse desprotegida um dia — hoje nenhuma e.
+ *
+ * Mora em common/ porque nao e assunto de nenhum modulo: hoje protege a geracao
+ * de plano por IA (que custa dinheiro) e a entrada em grupo por codigo (que e
+ * uma credencial adivinhavel).
  */
 @Injectable()
 export class UserThrottlerGuard extends ThrottlerGuard {
