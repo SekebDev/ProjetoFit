@@ -13,9 +13,10 @@ import type {
 import { Mascot } from "@/components/Mascot";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { useDeload } from "@/lib/hooks/useProgress";
+import { useDeload, useStreak } from "@/lib/hooks/useProgress";
 import { useNextWorkout, usePlans } from "@/lib/hooks/usePlans";
 import { useActiveSession } from "@/lib/hooks/useSessions";
+import { moodForStreak } from "@/lib/rackie/streak-mood";
 
 /** ISO 1=segunda .. 7=domingo. O indice 0 fica vazio de proposito. */
 const WEEKDAY_LABELS = [
@@ -57,7 +58,7 @@ function Painel() {
 
       <div className="mt-6 space-y-4">
         <CardPrincipal />
-        <SlotSequencia />
+        <CardSequencia />
         <BannerDeload />
       </div>
 
@@ -191,18 +192,71 @@ function CardSemTreino({ plans }: { plans: PlanSummary[] }) {
   );
 }
 
-/** Slot da sequência (streak). Placeholder honesto — a lógica vem na Fase 7. */
-function SlotSequencia() {
+/**
+ * A sequência com a Rackie reagindo — o coração da gamificação no painel.
+ *
+ * A pose e a fala saem do estado devolvido pelo servidor: comemora quando o dia
+ * agendado foi cumprido, cobra (sem culpa) quando está em risco, e comemora o
+ * descanso nos dias de folga — fiel ao que a mascote se propõe a ser.
+ */
+function CardSequencia() {
+  const { data, isLoading } = useStreak();
+
+  if (isLoading) {
+    return (
+      <div className="h-28 animate-pulse rounded-xl border bg-[var(--surface)]" />
+    );
+  }
+  if (!data) return null;
+
+  const { pose, phrase } = moodForStreak(data);
+  const semAgenda = data.state === "unscheduled";
+  const viva = data.current > 0;
+
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-dashed p-4">
-      <Flame size={20} className="shrink-0 text-[var(--muted-2)]" aria-hidden />
-      <div>
-        <p className="text-sm font-semibold text-[var(--muted)]">Sequência</p>
-        <p className="font-[family-name:var(--font-mono-face)] text-xs text-[var(--muted-2)]">
-          Em breve: acompanhe seus dias seguidos de treino.
-        </p>
+    <section className="flex items-center gap-4 rounded-xl border bg-[var(--surface)] p-4">
+      <Mascot state={pose} size="md" className="shrink-0" />
+
+      <div className="min-w-0 flex-1">
+        {semAgenda ? (
+          <p className="font-[family-name:var(--font-display-face)] text-base font-bold">
+            Sequência
+          </p>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <Flame
+              size={18}
+              strokeWidth={2.5}
+              aria-hidden
+              className={
+                viva ? "text-[var(--m-shoulders)]" : "text-[var(--muted-2)]"
+              }
+            />
+            <span className="font-[family-name:var(--font-display-face)] text-3xl font-bold tabular-nums leading-none">
+              {data.current}
+            </span>
+            <span className="text-sm text-[var(--muted)]">
+              {data.current === 1 ? "dia" : "dias"}
+            </span>
+          </div>
+        )}
+
+        <p className="mt-1.5 text-sm text-[var(--muted)]">{phrase}</p>
+
+        {semAgenda ? (
+          <Link
+            href="/plans"
+            className="mt-2 inline-flex text-sm font-semibold underline"
+          >
+            Agendar dias
+          </Link>
+        ) : data.best > data.current ? (
+          <p className="mt-1 font-[family-name:var(--font-mono-face)] text-[11px] text-[var(--muted-2)]">
+            Melhor sequência: {data.best}
+          </p>
+        ) : null}
       </div>
-    </div>
+    </section>
   );
 }
 
