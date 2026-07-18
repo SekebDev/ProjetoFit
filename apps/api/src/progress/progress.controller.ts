@@ -4,6 +4,7 @@ import {
   type Deload,
   type ExerciseProgress,
   type ProgressSummary,
+  type Streak,
 } from "@workout/shared";
 import { CurrentUser, type AuthUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -34,6 +35,15 @@ export class ProgressController {
     @Query("tz", new ZodValidationPipe(TimeZoneSchema)) tz: string,
   ): Promise<Deload> {
     return this.progress.deload(user.userId, tz);
+  }
+
+  /** Sequencia de dias agendados cumpridos, pro painel (gamificacao). */
+  @Get("streak")
+  streak(
+    @CurrentUser() user: AuthUser,
+    @Query("tz", new ZodValidationPipe(TimeZoneSchema)) tz: string,
+  ): Promise<Streak> {
+    return this.progress.streak(user.userId, tz);
   }
 
   // O userId vem do JWT: o :id aqui e do exercicio (que e publico), mas as

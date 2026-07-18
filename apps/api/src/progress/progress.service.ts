@@ -6,10 +6,12 @@ import {
   type ExerciseProgress,
   type PersonalRecord,
   type ProgressSummary,
+  type Streak,
   type WeeklyVolume,
 } from "@workout/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { computeDeload } from "./deload";
+import { computeStreak } from "./streak";
 
 /** Teto de pontos no grafico de um exercicio. */
 const MAX_POINTS = 200;
@@ -149,6 +151,57 @@ export class ProgressService {
       `,
     ]);
     return computeDeload(weeks, weekStart.toISOString());
+  }
+
+  /**
+   * Sequencia de dias de treino agendados cumpridos (com reposicao).
+   *
+   * Deriva de tres fontes, sem estado persistido: os dias em que houve treino
+   * encerrado (no fuso do usuario), os dias da semana agendados do plano ativo,
+   * e "hoje". O calculo em si mora em computeStreak — aqui so montamos os dados.
+   *
+   * O `(date AT TIME ZONE 'UTC') AT TIME ZONE ${tz}` e o mesmo padrao de dois
+   * passos do weeklyVolume: a coluna e timestamp UTC sem fuso, entao afirmamos
+   * "isto e UTC" e so depois convertemos pro horario do usuario — senao um
+   * treino de domingo a noite cairia no dia errado.
+   */
+  async streak(userId: string, tz: string): Promise<Streak> {
+    const [trainedRows, [{ today }], plan] = await Promise.all([
+      this.prisma.$queryRaw<{ day: string }[]>`
+        SELECT DISTINCT to_char(
+          date_trunc('day', (s.date AT TIME ZONE 'UTC') AT TIME ZONE ${tz}),
+          'YYYY-MM-DD'
+        ) AS "day"
+        FROM "WorkoutSession" s
+        WHERE s."userId" = ${userId}
+          AND s."finishedAt" IS NOT NULL
+          AND s.date >= now() - make_interval(days => 400)
+      `,
+      this.prisma.$queryRaw<{ today: string }[]>`
+        SELECT to_char(date_trunc('day', now() AT TIME ZONE ${tz}), 'YYYY-MM-DD')
+               AS "today"
+      `,
+      this.prisma.workoutPlan.findFirst({
+        where: { userId, isActive: true },
+        select: { days: { select: { weekday: true } } },
+      }),
+    ]);
+
+    const scheduleWeekdays = plan
+      ? [
+          ...new Set(
+            plan.days
+              .map((d) => d.weekday)
+              .filter((w): w is number => w !== null),
+          ),
+        ]
+      : [];
+
+    return computeStreak({
+      today,
+      trainedDates: trainedRows.map((r) => r.day),
+      scheduleWeekdays,
+    });
   }
 
   /**

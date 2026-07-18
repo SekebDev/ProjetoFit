@@ -92,6 +92,43 @@ export const ProgressSummarySchema = z.object({
 export type ProgressSummary = z.infer<typeof ProgressSummarySchema>;
 
 /**
+ * Estado da sequencia, que dita a pose e a fala da Rackie no painel:
+ * - `unscheduled`: sem plano ativo com dias agendados — nao da pra contar.
+ * - `idle`: sequencia zerada — bora comecar.
+ * - `active`: treinou o dia agendado, sequencia viva.
+ * - `resting`: dia de folga com a sequencia salva (descanso merecido).
+ * - `atRisk`: tem sequencia, mas o dia agendado de hoje ainda nao foi cumprido.
+ */
+export const StreakStateSchema = z.enum([
+  "unscheduled",
+  "idle",
+  "active",
+  "resting",
+  "atRisk",
+]);
+export type StreakState = z.infer<typeof StreakStateSchema>;
+
+/**
+ * Sequencia (GET /progress/streak).
+ *
+ * Conta dias de treino AGENDADOS cumpridos, com reposicao: faltar num dia
+ * agendado nao quebra se voce treinar num dia de folga antes do proximo dia
+ * agendado. Derivada do historico de sessoes — sem estado persistido.
+ */
+export const StreakSchema = z.object({
+  /** Dias agendados cumpridos em sequencia agora. */
+  current: z.number().int(),
+  /** Maior sequencia ja atingida na janela analisada. */
+  best: z.number().int(),
+  state: StreakStateSchema,
+  /** Hoje e um dia agendado de treino? */
+  scheduledToday: z.boolean(),
+  /** Ja treinou hoje? */
+  trainedToday: z.boolean(),
+});
+export type Streak = z.infer<typeof StreakSchema>;
+
+/**
  * Sugestao de deload (GET /progress/deload).
  *
  * Combina dois gatilhos: FATIGUE = o volume da ultima semana completa caiu

@@ -633,4 +633,89 @@ describe("Progress (e2e)", () => {
       expect(res.body).toEqual([]);
     });
   });
+
+  describe("GET /progress/streak", () => {
+    // ISO de hoje em UTC — o mesmo fuso mandado na query, pra o teste ser
+    // deterministico independente de quando roda.
+    const isoHoje = (() => {
+      const d = new Date().getUTCDay();
+      return d === 0 ? 7 : d;
+    })();
+    let tokenS = "";
+    let planDayS = "";
+
+    async function criaPlanoAgendado(
+      token: string,
+      weekday: number,
+    ): Promise<string> {
+      const res = await request(app.getHttpServer())
+        .post("/api/plans")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          name: "Streak",
+          notes: null,
+          days: [
+            {
+              name: "Dia",
+              focus: null,
+              weekday,
+              exercises: [
+                {
+                  exerciseId: supinoId,
+                  sets: 3,
+                  repScheme: "8-12",
+                  restSec: 120,
+                  notes: null,
+                },
+              ],
+            },
+          ],
+        })
+        .expect(201);
+      await request(app.getHttpServer())
+        .put(`/api/plans/${res.body.id}/activate`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      return res.body.days[0].id as string;
+    }
+
+    function streak(token: string, tz = "UTC") {
+      return request(app.getHttpServer())
+        .get("/api/progress/streak")
+        .query({ tz })
+        .set("Authorization", `Bearer ${token}`);
+    }
+
+    beforeAll(async () => {
+      tokenS = await register(`streak-${Date.now()}@teste.com`);
+      planDayS = await criaPlanoAgendado(tokenS, isoHoje);
+    });
+
+    it("sem plano ativo agendado devolve unscheduled", async () => {
+      const semAgenda = await register(`streak-none-${Date.now()}@teste.com`);
+      const res = await streak(semAgenda).expect(200);
+      expect(res.body.state).toBe("unscheduled");
+      expect(res.body.current).toBe(0);
+    });
+
+    it("treinar hoje no dia agendado deixa a sequencia ativa", async () => {
+      await treino(tokenS, planDayS, [
+        { exerciseId: supinoId, setNumber: 1, weightKg: 60, reps: 10 },
+      ]);
+
+      const res = await streak(tokenS).expect(200);
+
+      expect(res.body.scheduledToday).toBe(true);
+      expect(res.body.trainedToday).toBe(true);
+      expect(res.body.current).toBe(1);
+      expect(res.body.state).toBe("active");
+    });
+
+    it("exige autenticacao", async () => {
+      await request(app.getHttpServer())
+        .get("/api/progress/streak")
+        .query({ tz: "UTC" })
+        .expect(401);
+    });
+  });
 });
