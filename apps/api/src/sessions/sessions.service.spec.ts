@@ -76,10 +76,39 @@ function fakePrisma(overrides: Record<string, unknown>) {
     ...overrides,
   };
   return {
-    // Por padrao a transacao so entrega o proprio client ao callback.
+    // Por padrao a transacao so entrega o proprio client ao callback. O finish
+    // passa opcoes como segundo argumento; o fake ignora.
     $transaction: (fn: (tx: unknown) => unknown) => fn(client),
     ...client,
   } as never;
+}
+
+/**
+ * O GameService que o finish chama pra creditar XP.
+ *
+ * Devolve uma recompensa vazia: o que estes testes verificam e QUANDO o finish
+ * concede (so no primeiro fechamento), nao quanto — a conta do XP tem os testes
+ * dela em game/xp.spec.ts.
+ */
+function fakeGame(applyForSession = vi.fn().mockResolvedValue(RECOMPENSA_VAZIA)) {
+  return { applyForSession } as never;
+}
+
+const RECOMPENSA_VAZIA = {
+  xpGained: 0,
+  xpFromAchievements: 0,
+  streakBonus: 0,
+  levelBefore: 1,
+  levelAfter: 1,
+  leveledUp: false,
+  unlocked: [],
+};
+
+/** O tz e obrigatorio no finish; os demais metodos ignoram. */
+const TZ = "America/Sao_Paulo";
+
+function makeService(prisma: never, game: never = fakeGame()) {
+  return new SessionsService(prisma, game);
 }
 
 describe("SessionsService", () => {
@@ -87,7 +116,7 @@ describe("SessionsService", () => {
     it("recusa planDay de outro usuario com NotFound", async () => {
       // O where casa o dono via plan.userId; sem dono, o Prisma devolve null.
       const findFirst = vi.fn().mockResolvedValue(null);
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({ planDay: { findFirst } }),
       );
 
@@ -99,7 +128,7 @@ describe("SessionsService", () => {
     it("checa o dono pelo plano, nao so pelo id do dia", async () => {
       const findFirst = vi.fn().mockResolvedValue(planDayRow);
       const create = vi.fn().mockResolvedValue(sessionRow);
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({
           planDay: { findFirst },
           workoutSession: { findFirst: vi.fn().mockResolvedValue(null), create },
@@ -117,7 +146,7 @@ describe("SessionsService", () => {
 
     it("devolve a sessao aberta em vez de criar outra", async () => {
       const create = vi.fn();
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({
           planDay: { findFirst: vi.fn().mockResolvedValue(planDayRow) },
           workoutSession: {
@@ -138,7 +167,7 @@ describe("SessionsService", () => {
       // COMMITTED nao se enxergam). Sem orderBy, cairiamos numa qualquer —
       // possivelmente a vazia, perdendo de vista as series ja registradas.
       const findFirst = vi.fn().mockResolvedValue(null);
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({
           planDay: { findFirst: vi.fn().mockResolvedValue(planDayRow) },
           workoutSession: {
@@ -157,7 +186,7 @@ describe("SessionsService", () => {
 
     it("procura a sessao aberta por finishedAt null", async () => {
       const findFirst = vi.fn().mockResolvedValue(null);
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({
           planDay: { findFirst: vi.fn().mockResolvedValue(planDayRow) },
           workoutSession: {
@@ -177,7 +206,7 @@ describe("SessionsService", () => {
     });
 
     it("devolve a prescricao do dia, senao a tela de treino nao tem o que renderizar", async () => {
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({
           planDay: { findFirst: vi.fn().mockResolvedValue(planDayRow) },
           workoutSession: {
@@ -200,7 +229,7 @@ describe("SessionsService", () => {
 
     it("cria a sessao com o userId do token, nao do body", async () => {
       const create = vi.fn().mockResolvedValue(sessionRow);
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({
           planDay: { findFirst: vi.fn().mockResolvedValue(planDayRow) },
           workoutSession: { findFirst: vi.fn().mockResolvedValue(null), create },
@@ -227,7 +256,7 @@ describe("SessionsService", () => {
     };
 
     it("recusa sessao de outro usuario com NotFound", async () => {
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({
           workoutSession: { findFirst: vi.fn().mockResolvedValue(null) },
         }),
@@ -253,7 +282,7 @@ describe("SessionsService", () => {
         chamadas.push("read");
         return Promise.resolve({ ...sessionRow, planDay: planDayRow });
       });
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({
           $queryRaw,
           workoutSession: { findFirst },
@@ -270,7 +299,7 @@ describe("SessionsService", () => {
 
     it("recusa registrar serie em sessao ja encerrada", async () => {
       const upsert = vi.fn();
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({
           workoutSession: {
             findFirst: vi.fn().mockResolvedValue({
@@ -293,7 +322,7 @@ describe("SessionsService", () => {
       // Sem esta checagem o Postgres barraria por FK e o Nest devolveria 500,
       // classificando entrada ruim do cliente como erro de servidor.
       const upsert = vi.fn();
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({
           workoutSession: {
             findFirst: vi
@@ -312,7 +341,7 @@ describe("SessionsService", () => {
 
     it("faz upsert pela chave composta: reenviar a serie corrige, nao duplica", async () => {
       const upsert = vi.fn().mockResolvedValue(setLogRow);
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({
           workoutSession: {
             findFirst: vi
@@ -343,7 +372,7 @@ describe("SessionsService", () => {
       // dia. Sem dia pra conferir, cai no fallback "o exercicio existe?".
       const count = vi.fn().mockResolvedValue(1);
       const upsert = vi.fn().mockResolvedValue(setLogRow);
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({
           workoutSession: {
             findFirst: vi.fn().mockResolvedValue({
@@ -375,14 +404,14 @@ describe("SessionsService", () => {
     });
 
     it("recusa sessao de outro usuario com NotFound", async () => {
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({
           workoutSession: { findFirst: vi.fn().mockResolvedValue(null) },
         }),
       );
 
       await expect(
-        service.finish("intruso", "s1", { notes: null }),
+        service.finish("intruso", "s1", { notes: null, tz: TZ }),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -392,7 +421,7 @@ describe("SessionsService", () => {
         finishedAt: FIM,
         durationSec: 3600,
       });
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({
           workoutSession: {
             findFirst: vi.fn().mockResolvedValue(sessionRow),
@@ -402,7 +431,7 @@ describe("SessionsService", () => {
       );
       vi.setSystemTime(FIM);
 
-      await service.finish("u1", "s1", { notes: null });
+      await service.finish("u1", "s1", { notes: null, tz: TZ });
 
       // 10:00 -> 11:00 = 3600s. O cliente nao manda duracao: ele mentiria.
       expect(update.mock.calls[0][0].data.durationSec).toBe(3600);
@@ -415,7 +444,7 @@ describe("SessionsService", () => {
         finishedAt: FIM,
         durationSec: 3600,
       });
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({
           workoutSession: {
             findFirst: vi.fn().mockResolvedValue({
@@ -429,7 +458,7 @@ describe("SessionsService", () => {
       );
       vi.setSystemTime(new Date("2026-07-15T12:00:00.000Z"));
 
-      await service.finish("u1", "s1", { notes: "boa" });
+      await service.finish("u1", "s1", { notes: "boa", tz: TZ });
 
       const data = update.mock.calls[0][0].data;
       expect(data.finishedAt).toEqual(FIM);
@@ -437,12 +466,97 @@ describe("SessionsService", () => {
       // ...mas as notas do retry ainda entram.
       expect(data.notes).toBe("boa");
     });
+
+    it("credita XP quando e o primeiro fechamento", async () => {
+      const applyForSession = vi.fn().mockResolvedValue(RECOMPENSA_VAZIA);
+      const service = makeService(
+        fakePrisma({
+          workoutSession: {
+            // finishedAt null = a sessao estava mesmo aberta.
+            findFirst: vi.fn().mockResolvedValue(sessionRow),
+            update: vi
+              .fn()
+              .mockResolvedValue({ ...sessionRow, finishedAt: FIM }),
+          },
+        }),
+        fakeGame(applyForSession),
+      );
+      vi.setSystemTime(FIM);
+
+      const { reward } = await service.finish("u1", "s1", {
+        notes: null,
+        tz: TZ,
+      });
+
+      expect(applyForSession).toHaveBeenCalledTimes(1);
+      expect(applyForSession.mock.calls[0].slice(1)).toEqual(["u1", "s1", TZ]);
+      expect(reward).not.toBeNull();
+    });
+
+    it("NAO credita XP de novo quando a sessao ja estava encerrada", async () => {
+      // A guarda que impede um retry de rede de pagar o mesmo treino duas vezes.
+      const applyForSession = vi.fn().mockResolvedValue(RECOMPENSA_VAZIA);
+      const service = makeService(
+        fakePrisma({
+          workoutSession: {
+            findFirst: vi.fn().mockResolvedValue({
+              ...sessionRow,
+              finishedAt: FIM,
+              durationSec: 3600,
+            }),
+            update: vi
+              .fn()
+              .mockResolvedValue({ ...sessionRow, finishedAt: FIM }),
+          },
+        }),
+        fakeGame(applyForSession),
+      );
+      vi.setSystemTime(new Date("2026-07-15T12:00:00.000Z"));
+
+      const { reward } = await service.finish("u1", "s1", {
+        notes: null,
+        tz: TZ,
+      });
+
+      expect(applyForSession).not.toHaveBeenCalled();
+      // reward null e o que diz pra UI nao comemorar de novo.
+      expect(reward).toBeNull();
+    });
+
+    it("apura o XP DEPOIS de gravar o fim da sessao", async () => {
+      // A ordem importa: a sequencia que multiplica o XP le sessoes encerradas.
+      // Apurando antes do update, o treino de hoje nao contaria e o
+      // multiplicador sairia um dia atrasado.
+      const ordem: string[] = [];
+      const service = makeService(
+        fakePrisma({
+          workoutSession: {
+            findFirst: vi.fn().mockResolvedValue(sessionRow),
+            update: vi.fn().mockImplementation(() => {
+              ordem.push("update");
+              return Promise.resolve({ ...sessionRow, finishedAt: FIM });
+            }),
+          },
+        }),
+        fakeGame(
+          vi.fn().mockImplementation(() => {
+            ordem.push("xp");
+            return Promise.resolve(RECOMPENSA_VAZIA);
+          }),
+        ),
+      );
+      vi.setSystemTime(FIM);
+
+      await service.finish("u1", "s1", { notes: null, tz: TZ });
+
+      expect(ordem).toEqual(["update", "xp"]);
+    });
   });
 
   describe("activeSession", () => {
     it("devolve null quando nao ha sessao em aberto", async () => {
       const findFirst = vi.fn().mockResolvedValue(null);
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({ workoutSession: { findFirst } }),
       );
 
@@ -451,7 +565,7 @@ describe("SessionsService", () => {
 
     it("procura a sessao aberta do proprio usuario, a mais recente", async () => {
       const findFirst = vi.fn().mockResolvedValue(null);
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({ workoutSession: { findFirst } }),
       );
 
@@ -466,7 +580,7 @@ describe("SessionsService", () => {
     });
 
     it("devolve a sessao com a prescricao e as series pra tela retomar", async () => {
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({
           workoutSession: {
             findFirst: vi
@@ -488,7 +602,7 @@ describe("SessionsService", () => {
   describe("findAll", () => {
     it("lista apenas as sessoes do proprio usuario, recentes primeiro", async () => {
       const findMany = vi.fn().mockResolvedValue([]);
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({ workoutSession: { findMany } }),
       );
 
@@ -505,7 +619,7 @@ describe("SessionsService", () => {
 
   describe("lastLoads", () => {
     it("recusa planDay de outro usuario com NotFound", async () => {
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({ planDay: { findFirst: vi.fn().mockResolvedValue(null) } }),
       );
 
@@ -516,7 +630,7 @@ describe("SessionsService", () => {
 
     it("busca so a ultima serie de cada exercicio do dia, do proprio usuario", async () => {
       const findMany = vi.fn().mockResolvedValue([]);
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({
           planDay: { findFirst: vi.fn().mockResolvedValue(planDayRow) },
           setLog: { findMany },
@@ -540,7 +654,7 @@ describe("SessionsService", () => {
       // Senao a carga que acabei de registrar hoje viraria minha "ultima carga",
       // e o campo mudaria embaixo do usuario no meio do proprio treino.
       const findMany = vi.fn().mockResolvedValue([]);
-      const service = new SessionsService(
+      const service = makeService(
         fakePrisma({
           planDay: { findFirst: vi.fn().mockResolvedValue(planDayRow) },
           setLog: { findMany },

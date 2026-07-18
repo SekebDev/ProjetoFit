@@ -6,6 +6,8 @@ import { AppModule } from "../src/app.module";
 import { PrismaService } from "../src/prisma/prisma.service";
 
 const PASSWORD = "senha-de-teste-123";
+/** O finish exige fuso: e dele que sai o multiplicador de XP da sequencia. */
+const TZ = "America/Sao_Paulo";
 
 /** Ordem importa por causa das FKs. */
 async function limpaTudo(prisma: PrismaService): Promise<void> {
@@ -168,7 +170,7 @@ describe("Sessions (e2e)", () => {
       await request(app.getHttpServer())
         .patch(`/api/sessions/${criada.body.id}/finish`)
         .set("Authorization", `Bearer ${tokenA}`)
-        .send({ notes: null })
+        .send({ notes: null, tz: TZ })
         .expect(200);
 
       const res = await request(app.getHttpServer())
@@ -225,7 +227,7 @@ describe("Sessions (e2e)", () => {
       await request(app.getHttpServer())
         .patch(`/api/sessions/${primeira.body.id}/finish`)
         .set("Authorization", `Bearer ${tokenA}`)
-        .send({ notes: null })
+        .send({ notes: null, tz: TZ })
         .expect(200);
 
       const segunda = await iniciaSessao(tokenA, planDayA).expect(200);
@@ -316,7 +318,7 @@ describe("Sessions (e2e)", () => {
       await request(app.getHttpServer())
         .patch(`/api/sessions/${sessionId}/finish`)
         .set("Authorization", `Bearer ${tokenA}`)
-        .send({ notes: null })
+        .send({ notes: null, tz: TZ })
         .expect(200);
 
       const res = await registra(tokenA, sessionId, serie()).expect(400);
@@ -336,15 +338,15 @@ describe("Sessions (e2e)", () => {
       return request(app.getHttpServer())
         .patch(`/api/sessions/${id}/finish`)
         .set("Authorization", `Bearer ${token}`)
-        .send({ notes });
+        .send({ notes, tz: TZ });
     }
 
     it("encerra a sessao e calcula a duracao", async () => {
       const res = await finaliza(tokenA, sessionId, "treino bom").expect(200);
 
-      expect(res.body.finishedAt).not.toBeNull();
-      expect(res.body.durationSec).toBeGreaterThanOrEqual(0);
-      expect(res.body.notes).toBe("treino bom");
+      expect(res.body.session.finishedAt).not.toBeNull();
+      expect(res.body.session.durationSec).toBeGreaterThanOrEqual(0);
+      expect(res.body.session.notes).toBe("treino bom");
     });
 
     it("repetir o finish nao estica a duracao do treino", async () => {
@@ -353,10 +355,17 @@ describe("Sessions (e2e)", () => {
         200,
       );
 
-      expect(segunda.body.finishedAt).toBe(primeira.body.finishedAt);
-      expect(segunda.body.durationSec).toBe(primeira.body.durationSec);
+      expect(segunda.body.session.finishedAt).toBe(
+        primeira.body.session.finishedAt,
+      );
+      expect(segunda.body.session.durationSec).toBe(
+        primeira.body.session.durationSec,
+      );
       // ...mas a nota do retry entra.
-      expect(segunda.body.notes).toBe("esqueci a nota");
+      expect(segunda.body.session.notes).toBe("esqueci a nota");
+      // E a recompensa so sai no primeiro fechamento: o retry nao paga de novo.
+      expect(primeira.body.reward).not.toBeNull();
+      expect(segunda.body.reward).toBeNull();
     });
 
     it("rejeita sessao inexistente com 404", async () => {
@@ -413,7 +422,7 @@ describe("Sessions (e2e)", () => {
       await request(app.getHttpServer())
         .patch(`/api/sessions/${res.body.id}/finish`)
         .set("Authorization", `Bearer ${tokenA}`)
-        .send({ notes: null })
+        .send({ notes: null, tz: TZ })
         .expect(200);
     }
 
@@ -437,6 +446,21 @@ describe("Sessions (e2e)", () => {
       const res = await ultimas(tokenA, planDayA).expect(200);
 
       expect(res.body[0].weightKg).toBe(65);
+    });
+
+    it("separa a carga mais recente do recorde historico", async () => {
+      await treinoEncerrado(80);
+      // Semana leve depois de um pico: a carga recente cai, o recorde nao.
+      await treinoEncerrado(60);
+
+      const res = await ultimas(tokenA, planDayA).expect(200);
+
+      // A recente pre-preenche o campo...
+      expect(res.body[0].weightKg).toBe(60);
+      // ...e o recorde e o que decide PR. Sem esta separacao, voltar aos 80kg
+      // depois do deload seria comemorado como recorde novo pelo cliente, sem
+      // o servidor pagar XP nenhum por isso.
+      expect(res.body[0].bestWeightKg).toBe(80);
     });
 
     it("ignora as series da sessao ainda aberta", async () => {
@@ -492,7 +516,7 @@ describe("Sessions (e2e)", () => {
       await request(app.getHttpServer())
         .patch(`/api/sessions/${alheia.body.id}/finish`)
         .set("Authorization", `Bearer ${tokenA}`)
-        .send({ notes: null })
+        .send({ notes: null, tz: TZ })
         .expect(404);
     });
 

@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { ExerciseSchema } from "./exercise";
+import { SessionRewardSchema } from "./game";
 import { MAX_SETS, PlanDaySchema } from "./plan";
+import { TimeZoneSchema } from "./progress";
 
 /** Limites de sanidade — evitam payloads absurdos e travam a UI num range util. */
 export const MAX_WEIGHT_KG = 500;
@@ -40,6 +42,12 @@ export type LogSetInput = z.infer<typeof LogSetSchema>;
 /** PATCH /sessions/:id/finish — a duracao o servidor calcula, nao o cliente. */
 export const FinishSessionSchema = z.object({
   notes: z.string().max(1000).nullable(),
+  /**
+   * Fuso do cliente. Fechar o treino concede XP, e o multiplicador vem da
+   * sequencia — que so faz sentido no fuso de quem treinou. Serve tambem pra
+   * saber se o treino comecou de madrugada (conquista do madrugador).
+   */
+  tz: TimeZoneSchema,
 });
 export type FinishSessionInput = z.infer<typeof FinishSessionSchema>;
 
@@ -74,6 +82,20 @@ export const SessionSchema = z.object({
 });
 export type Session = z.infer<typeof SessionSchema>;
 
+/**
+ * Resposta do PATCH /sessions/:id/finish.
+ *
+ * A recompensa vem separada da sessao de proposito: `Session` e o mesmo objeto
+ * devolvido pelo start e pelo /active, onde recompensa nao faz sentido. Aqui o
+ * `reward` e null quando o finish nao concedeu nada — retry de uma sessao que
+ * ja estava fechada.
+ */
+export const FinishSessionResultSchema = z.object({
+  session: SessionSchema,
+  reward: SessionRewardSchema.nullable(),
+});
+export type FinishSessionResult = z.infer<typeof FinishSessionResultSchema>;
+
 /** Item do GET /sessions — sem os logs, so o resumo pro historico. */
 export const SessionSummarySchema = z.object({
   id: z.string(),
@@ -93,8 +115,22 @@ export type SessionSummary = z.infer<typeof SessionSummarySchema>;
  */
 export const LastLoadSchema = z.object({
   exercise: ExerciseSchema.pick({ id: true, name: true }),
+  /** A carga MAIS RECENTE — o que pre-preenche o campo. */
   weightKg: z.number().nullable(),
   reps: z.number().int().nullable(),
   date: z.string(),
+  /**
+   * O RECORDE historico do exercicio: a melhor serie de todos os tempos, por
+   * carga e, no empate, por repeticoes.
+   *
+   * Vem separado da carga recente porque as duas respondem perguntas
+   * diferentes: a recente pre-preenche o campo, o recorde decide se a serie que
+   * acabou de entrar e PR. Sem isto o cliente comparava com a ultima serie e
+   * comemorava PR onde o servidor (que compara com o recorde) nao pagava XP.
+   *
+   * null quando o exercicio nunca teve serie com carga (so peso corporal).
+   */
+  bestWeightKg: z.number().nullable(),
+  bestReps: z.number().int().nullable(),
 });
 export type LastLoad = z.infer<typeof LastLoadSchema>;

@@ -6,4 +6,5 @@ export * from "./schemas/plan";
 export * from "./schemas/session";
 export * from "./schemas/metric";
 export * from "./schemas/progress";
+export * from "./schemas/game";
 export * from "./schemas/ai";

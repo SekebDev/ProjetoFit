@@ -6,6 +6,7 @@ import {
 import type { Prisma } from "@prisma/client";
 import type {
   FinishSessionInput,
+  FinishSessionResult,
   LastLoad,
   LogSetInput,
   Session,
@@ -14,6 +15,7 @@ import type {
   StartSessionInput,
 } from "@workout/shared";
 import { toPlanDay, type PlanDayRow } from "../common/plan-mappers";
+import { GameService } from "../game/game.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 // `satisfies`, nao `as const`: o as const congela o orderBy num array readonly,
@@ -117,7 +119,10 @@ async function assertExercisePermitido(
 
 @Injectable()
 export class SessionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly game: GameService,
+  ) {}
 
   async start(userId: string, input: StartSessionInput): Promise<Session> {
     return this.prisma.$transaction(async (tx) => {
@@ -223,33 +228,57 @@ export class SessionsService {
     userId: string,
     sessionId: string,
     input: FinishSessionInput,
-  ): Promise<Session> {
-    return this.prisma.$transaction(async (tx) => {
-      const atual = await tx.workoutSession.findFirst({
-        where: { id: sessionId, userId },
-        select: { id: true, date: true, finishedAt: true, durationSec: true },
-      });
-      if (!atual) {
-        throw new NotFoundException("Sessão não encontrada");
-      }
+  ): Promise<FinishSessionResult> {
+    return this.prisma.$transaction(
+      async (tx) => {
+        const atual = await tx.workoutSession.findFirst({
+          where: { id: sessionId, userId },
+          select: { id: true, date: true, finishedAt: true, durationSec: true },
+        });
+        if (!atual) {
+          throw new NotFoundException("Sessão não encontrada");
+        }
 
-      // Idempotente: se ja fechou, preserva fim e duracao originais — um retry
-      // do finish nao pode esticar a duracao do treino. As notas ainda entram.
-      const finishedAt = atual.finishedAt ?? new Date();
-      const durationSec =
-        atual.durationSec ??
-        Math.max(
-          0,
-          Math.round((finishedAt.getTime() - atual.date.getTime()) / 1000),
-        );
+        // Idempotente: se ja fechou, preserva fim e duracao originais — um retry
+        // do finish nao pode esticar a duracao do treino. As notas ainda entram.
+        const finishedAt = atual.finishedAt ?? new Date();
+        const durationSec =
+          atual.durationSec ??
+          Math.max(
+            0,
+            Math.round((finishedAt.getTime() - atual.date.getTime()) / 1000),
+          );
 
-      const row = await tx.workoutSession.update({
-        where: { id: sessionId },
-        data: { finishedAt, durationSec, notes: input.notes },
-        include: SESSION_INCLUDE,
-      });
-      return toSession(row as SessionRow);
-    });
+        // Quem encontrou a sessao ainda aberta e quem de fato a fechou — e o
+        // unico que ganha XP. Sem esta guarda, um retry de rede no finish
+        // pagaria o mesmo treino de novo.
+        const fechouAgora = atual.finishedAt === null;
+
+        const row = await tx.workoutSession.update({
+          where: { id: sessionId },
+          data: { finishedAt, durationSec, notes: input.notes },
+          include: SESSION_INCLUDE,
+        });
+
+        // Depois do update, de proposito: a sequencia que multiplica o XP le as
+        // sessoes encerradas, e dentro da transacao ela so enxerga o treino de
+        // hoje depois que o finishedAt foi gravado.
+        const reward = fechouAgora
+          ? await this.game.applyForSession(tx, userId, sessionId, input.tz)
+          : null;
+
+        return { session: toSession(row as SessionRow), reward };
+      },
+      // Acima dos 5s padrao: a transacao agora inclui a apuracao de XP, com a
+      // janela de PRs e a sequencia. Estourar o tempo aqui desfaria o fim do
+      // treino — o dado que mais importa nao pode cair por causa da recompensa.
+      //
+      // O maxWait sobe junto: de nada adianta tolerar uma transacao longa se a
+      // espera POR UMA CONEXAO continua nos 2s padrao. Com varios finish
+      // concorrentes, a transacao mais longa segura o pool e as seguintes
+      // falhariam antes mesmo de comecar.
+      { timeout: 15_000, maxWait: 10_000 },
+    );
   }
 
   /**
@@ -303,29 +332,59 @@ export class SessionsService {
       return [];
     }
 
-    const rows = await this.prisma.setLog.findMany({
-      where: {
-        exerciseId: { in: ids },
-        completed: true,
-        // So sessoes encerradas: senao a carga que o usuario acabou de registrar
-        // viraria a "ultima carga", mudando embaixo dele no meio do treino.
-        session: { userId, finishedAt: { not: null } },
-      },
-      // DISTINCT ON exige que o orderBy comece pela coluna distinta; o createdAt
-      // desc em seguida e o que faz sobrar a serie mais recente de cada exercicio.
-      orderBy: [{ exerciseId: "asc" }, { createdAt: "desc" }],
-      distinct: ["exerciseId"],
-      include: {
-        exercise: { select: { id: true, name: true } },
-        session: { select: { date: true } },
-      },
-    });
+    // So sessoes encerradas: senao a carga que o usuario acabou de registrar
+    // viraria a "ultima carga", mudando embaixo dele no meio do treino.
+    const where = {
+      exerciseId: { in: ids },
+      completed: true,
+      session: { userId, finishedAt: { not: null } },
+    };
 
-    return rows.map((row) => ({
-      exercise: { id: row.exercise.id, name: row.exercise.name },
-      weightKg: row.weightKg,
-      reps: row.reps,
-      date: row.session.date.toISOString(),
-    }));
+    const [recentes, recordes] = await Promise.all([
+      this.prisma.setLog.findMany({
+        where,
+        // DISTINCT ON exige que o orderBy comece pela coluna distinta; o
+        // createdAt desc em seguida e o que faz sobrar a serie mais recente de
+        // cada exercicio.
+        orderBy: [{ exerciseId: "asc" }, { createdAt: "desc" }],
+        distinct: ["exerciseId"],
+        include: {
+          exercise: { select: { id: true, name: true } },
+          session: { select: { date: true } },
+        },
+      }),
+      // A melhor serie de sempre, pra decidir PR. Mesma ordenacao lexicografica
+      // que o servidor usa ao apurar XP (game/game.service.ts): carga primeiro,
+      // repeticoes no desempate.
+      //
+      // `nulls: "last"` nao e detalhe: no Postgres, DESC poe NULL na frente, e
+      // sem isto uma serie de peso corporal (carga null) viraria o "recorde".
+      this.prisma.setLog.findMany({
+        where,
+        orderBy: [
+          { exerciseId: "asc" },
+          { weightKg: { sort: "desc", nulls: "last" } },
+          { reps: { sort: "desc", nulls: "last" } },
+        ],
+        distinct: ["exerciseId"],
+        select: { exerciseId: true, weightKg: true, reps: true },
+      }),
+    ]);
+
+    const recordePorExercicio = new Map(
+      recordes.map((r) => [r.exerciseId, r]),
+    );
+
+    return recentes.map((row) => {
+      const recorde = recordePorExercicio.get(row.exerciseId);
+      return {
+        exercise: { id: row.exercise.id, name: row.exercise.name },
+        weightKg: row.weightKg,
+        reps: row.reps,
+        date: row.session.date.toISOString(),
+        bestWeightKg: recorde?.weightKg ?? null,
+        bestReps: recorde?.reps ?? null,
+      };
+    });
   }
 }

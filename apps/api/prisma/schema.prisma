@@ -18,6 +18,8 @@ model User {
   plans        WorkoutPlan[]
   sessions     WorkoutSession[]
   metrics      BodyMetric[]
+  game         GameProfile?
+  achievements UserAchievement[]
 }
 
 model Profile {
@@ -196,4 +198,63 @@ model BodyMetric {
 
   // "meu peso ao longo do tempo" — a unica leitura que existe.
   @@index([userId, date])
+}
+
+/**
+ * XP acumulado e nivel do usuario.
+ *
+ * Estado persistido, somado ao fechar cada sessao — nao derivado do historico.
+ * A escolha e deliberada: o multiplicador de XP usa a sequencia do MOMENTO em
+ * que voce fechou o treino, e reconstruir a sequencia de cada sessao passada
+ * seria caro e fragil. Acumular resolve isso de graca.
+ *
+ * De proposito NAO guarda sequencia aqui (o plano original previa
+ * currentStreak/longestStreak/streakFreezes). A sequencia ja existe, derivada
+ * do historico em progress/streak.ts, com a regra de dias agendados cumpridos
+ * com reposicao. Duplicar viraria duas verdades sobre a mesma chama, divergindo
+ * em silencio.
+ */
+model GameProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  // Cascade, igual Profile: apagar a conta leva junto o progresso.
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  xp        Int      @default(0)
+  level     Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * Catalogo fixo de conquistas, populado pelo seed (upsert por `code`).
+ *
+ * Mora no banco e nao so em codigo porque UserAchievement referencia por FK —
+ * mas a fonte da verdade do catalogo continua sendo game/catalog.ts, que o seed
+ * le. Editar o catalogo la e re-semear e o fluxo.
+ */
+model Achievement {
+  id          String            @id @default(cuid())
+  // Chave estavel usada pelo codigo ("FIRST_PR"); o id muda entre ambientes.
+  code        String            @unique
+  name        String
+  description String
+  icon        String
+  xpReward    Int               @default(0)
+  users       UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  // Restrict (padrao): nao deixa sumir do catalogo uma conquista ja desbloqueada.
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  unlockedAt    DateTime    @default(now())
+
+  // O banco e a autoridade contra corrida: dois finish simultaneos que avaliem
+  // a mesma conquista nao conseguem grava-la duas vezes.
+  @@unique([userId, achievementId])
+  // "as conquistas do usuario X" — a consulta do GET /game/achievements.
+  @@index([userId])
 }

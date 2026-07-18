@@ -109,7 +109,7 @@ describe("Progress (e2e)", () => {
     await request(app.getHttpServer())
       .patch(`/api/sessions/${sessionId}/finish`)
       .set("Authorization", `Bearer ${token}`)
-      .send({ notes: null })
+      .send({ notes: null, tz: "America/Sao_Paulo" })
       .expect(200);
 
     if (date) {

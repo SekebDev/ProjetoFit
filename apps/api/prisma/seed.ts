@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { ACHIEVEMENTS } from "../src/game/catalog";
 
 const prisma = new PrismaClient();
 
@@ -106,6 +107,36 @@ async function main(): Promise<void> {
     );
   }
   console.log(`Seed: ${data.length} exercícios sincronizados.`);
+
+  await seedAchievements();
+}
+
+/**
+ * Sincroniza o catalogo de conquistas.
+ *
+ * Upsert por `code`, nunca deleteMany — o mesmo motivo dos exercicios:
+ * UserAchievement aponta pro Achievement.id, e apagar/recriar regeraria os
+ * cuid(), fazendo sumir tudo que os usuarios ja desbloquearam.
+ */
+async function seedAchievements(): Promise<void> {
+  const data = ACHIEVEMENTS.map((a) => ({
+    code: a.code,
+    name: a.name,
+    description: a.description,
+    icon: a.icon,
+    xpReward: a.xpReward,
+  }));
+
+  await prisma.$transaction(
+    data.map((item) =>
+      prisma.achievement.upsert({
+        where: { code: item.code },
+        create: item,
+        update: item,
+      }),
+    ),
+  );
+  console.log(`Seed: ${data.length} conquistas sincronizadas.`);
 }
 
 main()

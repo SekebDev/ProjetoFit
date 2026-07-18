@@ -3,6 +3,7 @@ import { ConfigModule } from "@nestjs/config";
 import { AiModule } from "./ai/ai.module";
 import { AuthModule } from "./auth/auth.module";
 import { ExercisesModule } from "./exercises/exercises.module";
+import { GameModule } from "./game/game.module";
 import { HealthModule } from "./health/health.module";
 import { MetricsModule } from "./metrics/metrics.module";
 import { PlansModule } from "./plans/plans.module";
@@ -22,6 +23,7 @@ import { SessionsModule } from "./sessions/sessions.module";
     PlansModule,
     SessionsModule,
     ProgressModule,
+    GameModule,
     MetricsModule,
     AiModule,
   ],

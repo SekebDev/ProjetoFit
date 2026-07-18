@@ -15,6 +15,7 @@ import {
   PlanDayIdSchema,
   StartSessionSchema,
   type FinishSessionInput,
+  type FinishSessionResult,
   type LastLoad,
   type LogSetInput,
   type Session,
@@ -84,7 +85,7 @@ export class SessionsController {
     @CurrentUser() user: AuthUser,
     @Param("id") id: string,
     @Body(new ZodValidationPipe(FinishSessionSchema)) body: FinishSessionInput,
-  ): Promise<Session> {
+  ): Promise<FinishSessionResult> {
     return this.sessions.finish(user.userId, id, body);
   }
 }
