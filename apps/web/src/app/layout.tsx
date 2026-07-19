@@ -30,10 +30,16 @@ export const metadata: Metadata = {
     capable: true,
     title: "Hipertrof.AI",
     statusBarStyle: "black-translucent",
+    startupImage: "/icon-512.png",
   },
   icons: {
     icon: "/icon-192.png",
     apple: "/icon-192.png",
+  },
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "black-translucent",
+    "apple-mobile-web-app-title": "Hipertrof.AI",
   },
 };
 
@@ -53,6 +59,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <Nav />
           {children}
         </Providers>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }`,
+          }}
+        />
       </body>
     </html>
   );

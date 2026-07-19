@@ -8,7 +8,9 @@
     "start": "next start -p 3000",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ignore-pattern \"public/sw.js\" --ignore-pattern \"public/swe-worker-*.js\"",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "screenshots": "node scripts/generate-screenshots.js",
+    "icons": "node scripts/generate-icons.js"
   },
   "dependencies": {
     "@formkit/auto-animate": "0.10.0",
