@@ -6,7 +6,7 @@ export default function AuthIndex() {
 
   useEffect(() => {
     router.replace("/(auth)/login");
-  }, []);
+  }, [router]);
 
   return null;
 }

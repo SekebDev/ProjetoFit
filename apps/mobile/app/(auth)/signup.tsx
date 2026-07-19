@@ -6,11 +6,16 @@ import { api } from "@/lib/api";
 import { tokenStorage } from "@/lib/storage";
 import { getAuthErrorMessage } from "@/lib/errors";
 
-// Espelha LoginSchema da API: senha so precisa nao estar vazia. Exigir mais
-// aqui barraria contas antigas com senha curta.
-const credentialsSchema = z.object({
+// Espelha RegisterSchema da API: senha entre 8 e 72 (bcrypt trunca em 72),
+// nome ate 80. O nome e opcional no servidor, mas pedimos aqui porque e ele
+// que aparece no ranking dos grupos.
+const signupSchema = z.object({
+  name: z.string().trim().min(1, "Informe seu nome").max(80, "Nome muito longo"),
   email: z.string().trim().min(1, "Informe seu email").email("Email invalido"),
-  password: z.string().min(1, "Informe sua senha"),
+  password: z
+    .string()
+    .min(8, "A senha precisa de ao menos 8 caracteres")
+    .max(72, "A senha pode ter no maximo 72 caracteres"),
 });
 
 // A API devolve AuthResponse: { token, user }. Nao existe refreshToken.
@@ -18,17 +23,18 @@ const authResponseSchema = z.object({
   token: z.string().min(1),
 });
 
-export default function LoginScreen() {
+export default function SignupScreen() {
   const router = useRouter();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleLogin = async () => {
-    const credentials = credentialsSchema.safeParse({ email, password });
-    if (!credentials.success) {
-      setError(credentials.error.issues[0].message);
+  const handleSignup = async () => {
+    const input = signupSchema.safeParse({ name, email, password });
+    if (!input.success) {
+      setError(input.error.issues[0].message);
       return;
     }
 
@@ -36,10 +42,10 @@ export default function LoginScreen() {
     setError("");
 
     try {
-      const response = await api.post("/api/auth/login", credentials.data);
+      const response = await api.post("/api/auth/register", input.data);
       const parsed = authResponseSchema.safeParse(response.data);
       if (!parsed.success) {
-        throw new Error("Resposta de login invalida.");
+        throw new Error("Resposta de cadastro invalida.");
       }
 
       await tokenStorage.setToken(parsed.data.token);
@@ -53,8 +59,8 @@ export default function LoginScreen() {
 
   return (
     <View className="flex-1 bg-[#0e1014] px-6 justify-center">
-      <Text className="text-white text-3xl font-bold mb-2">Hipertrof.AI</Text>
-      <Text className="text-gray-400 mb-8">Faça login para começar</Text>
+      <Text className="text-white text-3xl font-bold mb-2">Criar conta</Text>
+      <Text className="text-gray-400 mb-8">Comece a treinar com método</Text>
 
       {error ? (
         <Text
@@ -64,6 +70,17 @@ export default function LoginScreen() {
           {error}
         </Text>
       ) : null}
+
+      <TextInput
+        placeholder="Nome"
+        placeholderTextColor="#6b7280"
+        value={name}
+        onChangeText={setName}
+        editable={!loading}
+        autoComplete="name"
+        accessibilityLabel="Nome"
+        className="bg-gray-900 text-white px-4 py-3 rounded-lg mb-4 border border-gray-700"
+      />
 
       <TextInput
         placeholder="Email"
@@ -79,38 +96,38 @@ export default function LoginScreen() {
       />
 
       <TextInput
-        placeholder="Senha"
+        placeholder="Senha (min. 8 caracteres)"
         placeholderTextColor="#6b7280"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
         editable={!loading}
         autoCapitalize="none"
-        autoComplete="current-password"
+        autoComplete="new-password"
         accessibilityLabel="Senha"
         className="bg-gray-900 text-white px-4 py-3 rounded-lg mb-6 border border-gray-700"
       />
 
       <Pressable
-        onPress={handleLogin}
+        onPress={handleSignup}
         disabled={loading}
         accessibilityRole="button"
         accessibilityState={{ disabled: loading }}
         className="bg-purple-600 py-3 rounded-lg mb-4"
       >
         <Text className="text-white text-center font-semibold">
-          {loading ? "Carregando..." : "Entrar"}
+          {loading ? "Criando..." : "Criar conta"}
         </Text>
       </Pressable>
 
       <Text className="text-gray-400 text-center text-sm">
-        Ainda não tem conta?{" "}
+        Já tem conta?{" "}
         <Text
           accessibilityRole="link"
           className="text-purple-400 font-semibold"
-          onPress={() => router.push("/(auth)/signup")}
+          onPress={() => router.replace("/(auth)/login")}
         >
-          Crie uma
+          Entrar
         </Text>
       </Text>
     </View>

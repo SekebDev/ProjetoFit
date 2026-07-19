@@ -1,14 +1,22 @@
 import { View, Text, Pressable, ActivityIndicator } from "react-native";
-import { useProfile } from "@/lib/hooks";
+import { useState } from "react";
 import { useRouter } from "expo-router";
+import { useProfile } from "@/lib/hooks";
 import { tokenStorage } from "@/lib/storage";
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { data: user, isLoading } = useProfile();
+  const { data: user, isLoading, error } = useProfile();
+  const [logoutError, setLogoutError] = useState("");
 
   const handleLogout = async () => {
-    await tokenStorage.clear();
+    try {
+      await tokenStorage.clear();
+    } catch {
+      // Sair com token no dispositivo e pior que nao sair: avisa e fica.
+      setLogoutError("Nao foi possivel sair. Tente novamente.");
+      return;
+    }
     router.replace("/(auth)/login");
   };
 
@@ -26,52 +34,45 @@ export default function ProfileScreen() {
         <Text className="text-white text-2xl font-bold">👤 Perfil</Text>
       </View>
 
-      {user ? (
-        <View className="px-6 py-6">
-          <View className="bg-gray-900 rounded-lg p-6 border border-gray-800 mb-6">
-            <Text className="text-white text-xl font-bold">{user.name}</Text>
-            <Text className="text-gray-400 text-sm mt-2">{user.email}</Text>
-            {user.bio && (
-              <Text className="text-gray-500 text-sm mt-3">{user.bio}</Text>
-            )}
-          </View>
-
-          <View className="bg-gray-900 rounded-lg p-4 border border-gray-800 mb-6">
-            <Text className="text-gray-400 text-sm">Estatísticas</Text>
-            <View className="mt-4 gap-3">
-              <View className="flex-row justify-between">
-                <Text className="text-gray-400">Treinos Completos</Text>
-                <Text className="text-primary font-semibold">
-                  {user.workoutsCompleted || 0}
-                </Text>
-              </View>
-              <View className="flex-row justify-between">
-                <Text className="text-gray-400">Peso Total (kg)</Text>
-                <Text className="text-primary font-semibold">
-                  {user.totalWeight || 0}
-                </Text>
-              </View>
-              <View className="flex-row justify-between">
-                <Text className="text-gray-400">Posição no Ranking</Text>
-                <Text className="text-primary font-semibold">
-                  #{user.rankingPosition || "—"}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <Pressable
-            onPress={handleLogout}
-            className="bg-red-600 py-3 rounded-lg"
+      <View className="px-6 py-6">
+        {error || !user ? (
+          <Text
+            accessibilityRole="alert"
+            className="text-red-400 text-center mb-6"
           >
-            <Text className="text-white text-center font-semibold">Sair</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <View className="flex-1 justify-center items-center">
-          <Text className="text-gray-400">Erro ao carregar perfil</Text>
-        </View>
-      )}
+            Nao foi possivel carregar o perfil.
+          </Text>
+        ) : (
+          <View className="bg-gray-900 rounded-lg p-6 border border-gray-800 mb-6">
+            <Text className="text-white text-xl font-bold">
+              {user.name ?? "Sem nome"}
+            </Text>
+            <Text className="text-gray-400 text-sm mt-2">{user.email}</Text>
+            <Text className="text-gray-500 text-xs mt-4">
+              Na plataforma desde{" "}
+              {new Date(user.createdAt).toLocaleDateString("pt-BR")}
+            </Text>
+          </View>
+        )}
+
+        {logoutError ? (
+          <Text
+            accessibilityRole="alert"
+            className="text-red-400 mb-3 text-center text-sm"
+          >
+            {logoutError}
+          </Text>
+        ) : null}
+
+        <Pressable
+          onPress={handleLogout}
+          accessibilityRole="button"
+          accessibilityLabel="Sair da conta"
+          className="bg-red-600 py-3 rounded-lg"
+        >
+          <Text className="text-white text-center font-semibold">Sair</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }

@@ -1,49 +1,49 @@
 import * as SecureStore from "expo-secure-store";
 
 const TOKEN_KEY = "auth_token";
-const REFRESH_TOKEN_KEY = "refresh_token";
 
+/** Falha ao guardar/limpar token e erro real: o chamador precisa saber. */
+export class TokenStorageError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = "TokenStorageError";
+  }
+}
+
+/**
+ * Guarda o JWT emitido por POST /auth/login e /auth/register.
+ *
+ * Nao ha refresh token: a API devolve so `{ token, user }`, entao quando esse
+ * token expira o caminho e refazer login.
+ */
 export const tokenStorage = {
-  async setToken(token: string) {
+  async setToken(token: string): Promise<void> {
     try {
       await SecureStore.setItemAsync(TOKEN_KEY, token);
     } catch (error) {
-      console.error("Failed to set token:", error);
+      throw new TokenStorageError("Nao foi possivel salvar a sessao.", {
+        cause: error,
+      });
     }
   },
 
+  /** Leitura falha => tratamos como "sem sessao", que e o fallback seguro. */
   async getToken(): Promise<string | null> {
     try {
       return await SecureStore.getItemAsync(TOKEN_KEY);
-    } catch (error) {
-      console.error("Failed to get token:", error);
+    } catch {
       return null;
     }
   },
 
-  async setRefreshToken(token: string) {
-    try {
-      await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, token);
-    } catch (error) {
-      console.error("Failed to set refresh token:", error);
-    }
-  },
-
-  async getRefreshToken(): Promise<string | null> {
-    try {
-      return await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
-    } catch (error) {
-      console.error("Failed to get refresh token:", error);
-      return null;
-    }
-  },
-
-  async clear() {
+  /** Token que sobrevive ao logout e problema de seguranca, entao propaga. */
+  async clear(): Promise<void> {
     try {
       await SecureStore.deleteItemAsync(TOKEN_KEY);
-      await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
     } catch (error) {
-      console.error("Failed to clear tokens:", error);
+      throw new TokenStorageError("Nao foi possivel encerrar a sessao.", {
+        cause: error,
+      });
     }
   },
 };
