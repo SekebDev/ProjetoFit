@@ -1,0 +1,44 @@
+# Blueprint do Render: a API descrita em codigo, em vez de cliques no painel.
+# Uso: no painel do Render, "New" > "Blueprint" e aponte para este repositorio.
+#
+# O BANCO NAO ESTA AQUI, de proposito. O Postgres gratuito do Render expira 30
+# dias apos a criacao e e APAGADO (14 dias de carencia so para virar pago). O
+# banco vive no Neon, que nao expira, e a URL entra por DATABASE_URL.
+services:
+  - type: web
+    name: hipertrofai-api
+    runtime: docker
+    dockerfilePath: ./docker/api.Dockerfile
+    # Raiz do monorepo, nao apps/api: o Dockerfile faz COPY de
+    # pnpm-workspace.yaml, pnpm-lock.yaml e packages/shared.
+    dockerContext: .
+    plan: free
+    region: ohio
+    # O CMD da imagem roda `prisma migrate deploy` antes de subir, entao o
+    # health check so passa depois das migrations aplicadas.
+    healthCheckPath: /api/health
+    envVars:
+      # PORT nao aparece aqui de proposito: o Render injeta a dele, e main.ts
+      # ja le do ambiente com fallback para 3001.
+
+      # String de conexao do Neon. sync:false = o Render pergunta no primeiro
+      # deploy; o segredo nunca e gravado neste arquivo versionado.
+      - key: DATABASE_URL
+        sync: false
+      # Gerado pelo Render. O codigo exige apenas presenca, sem tamanho minimo
+      # (jwt.strategy.ts:15), entao o valor gerado serve — e ninguem precisa
+      # manusear o segredo.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      # Opcional. Sem ela a geracao de plano por IA responde 503 e o resto do
+      # app continua funcionando normalmente.
+      - key: OPENAI_API_KEY
+        sync: false
+      # A origem EXATA do front na Vercel, sem barra no final. Sem isso o CORS
+      # bloqueia todas as chamadas do navegador (main.ts:15). So da para
+      # preencher depois que a Vercel existir — por isso o deploy tem duas
+      # passadas.
+      - key: WEB_ORIGIN
+        sync: false
