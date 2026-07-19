@@ -28,10 +28,14 @@ async function preenchePerfil(page: Page): Promise<void> {
 /**
  * Resposta da API interceptada no browser.
  *
- * O container de teste nao tem OPENAI_API_KEY (e nem deveria: chave de verdade
- * em teste custa dinheiro e nao e deterministica). Pro caminho feliz a resposta
- * e dublada aqui; pro caminho degradado a API responde 503 sozinha e o teste
- * nao precisa fingir nada.
+ * TODO caminho que chegaria em POST /ai/plans/generate passa por aqui, sem
+ * excecao — inclusive o 503. Chave de verdade em teste custa dinheiro e nao e
+ * deterministica, e depender de o container NAO ter a chave e uma premissa que
+ * o ambiente pode desfazer sem ninguem perceber (foi o que aconteceu).
+ *
+ * O que esta suite testa e a traducao de status em mensagem (AIPlanForm), que e
+ * decidida so pelo status. Que a API responda 503 quando falta a chave e assunto
+ * do e2e da API, onde nada e cobrado.
  */
 async function dublaResposta(
   page: Page,
@@ -110,14 +114,19 @@ test.describe("Gerar plano por IA", () => {
     ).toBeVisible();
   });
 
-  // O estado real de quem nao configurou a chave — inclusive este container.
   test("sem a chave configurada, explica em vez de dar erro generico", async ({
     page,
   }) => {
     await registrar(page);
     await preenchePerfil(page);
-    await page.goto("/generate");
+    // Dublado como os demais caminhos de erro. Antes este teste deixava a
+    // chamada passar, contando com um container sem OPENAI_API_KEY — premissa
+    // que deixou de valer quando a chave entrou no ambiente, e a suite passou a
+    // gerar (e pagar) um plano de verdade a cada rodada. O assunto do teste e o
+    // que a UI mostra diante de um 503, nao a configuracao do servidor.
+    await dublaResposta(page, 503, { message: "Service Unavailable" });
 
+    await page.goto("/generate");
     await page.getByRole("button", { name: /gerar plano/i }).click();
 
     await expect(page.getByText(/não está configurada/i)).toBeVisible();
