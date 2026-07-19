@@ -7,7 +7,9 @@
     "icon": "./assets/images/icon.png",
     "scheme": "hipertrof",
     "userInterfaceStyle": "dark",
-    "platforms": ["android"],
+    "platforms": [
+      "android"
+    ],
     "android": {
       "package": "com.hipertrof.ai",
       "versionCode": 1,
@@ -23,6 +25,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "eacbc8b0-8be5-4c38-9d35-1564ed4703da"
+      }
+    },
+    "owner": "sekeb"
   }
 }
