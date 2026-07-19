@@ -22,13 +22,13 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ProjetoFit — RACK",
+  title: "ProjetoFit — Hipertrof.AI",
   description: "App de treino pessoal: biblioteca, progressao e planos por IA",
-  applicationName: "RACK",
+  applicationName: "Hipertrof.AI",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "RACK",
+    title: "Hipertrof.AI",
     statusBarStyle: "black-translucent",
   },
   icons: {

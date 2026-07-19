@@ -1,16 +1,10 @@
 "use client";
 
-import {
-  ClipboardList,
-  Dumbbell,
-  House,
-  TrendingUp,
-  User,
-  Users,
-} from "lucide-react";
+import { ClipboardList, Dumbbell, House, TrendingUp, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { PublicUser } from "@workout/shared";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +34,21 @@ function isActive(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
+/**
+ * A letra do avatar.
+ *
+ * `name` e nullable no schema (da pra se cadastrar so com e-mail), e o trim
+ * cobre quem salvou espacos em branco — nos dois casos o e-mail assume.
+ *
+ * Array.from em vez de charAt: charAt corta um par substituto no meio e um nome
+ * comecado por emoji viraria um losango. Custa nada e nao tem esse jeito de
+ * falhar.
+ */
+function inicialDe(user: PublicUser): string {
+  const base = user.name?.trim() || user.email;
+  return (Array.from(base)[0] ?? "?").toUpperCase();
+}
+
 export function Nav() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
@@ -49,8 +58,12 @@ export function Nav() {
       <header className="sticky top-0 z-40 border-b bg-[var(--bg)]/85 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-5">
           <Link href="/" className="flex items-baseline gap-2">
-            <span className="font-[family-name:var(--font-display-face)] text-lg font-bold tracking-[0.2em] text-[var(--chalk)]">
-              RACK
+            {/* tracking curto de proposito. O 0.2em anterior existia pra dar
+                corpo a uma sigla de 4 letras; em "Hipertrof.AI", com 12
+                caracteres e caixa mista, o mesmo espacamento esticaria o
+                wordmark pra ~160px e o desmancharia em letras soltas. */}
+            <span className="font-[family-name:var(--font-display-face)] text-lg font-bold tracking-[0.02em] text-[var(--chalk)]">
+              Hipertrof.AI
             </span>
             <span className="hidden font-[family-name:var(--font-mono-face)] text-[10px] uppercase tracking-widest text-[var(--muted-2)] sm:inline">
               projetofit
@@ -86,28 +99,42 @@ export function Nav() {
             {user ? (
               <>
                 {/* Perfil saiu da barra de baixo, entao ESTE e o unico caminho
-                    ate ele no mobile — por isso o icone aparece sempre, e nao
-                    so a partir do md como o e-mail. */}
+                    ate ele no mobile. Um icone de contorno de 17px nao dava
+                    conta desse papel: ficava mais apagado que o "Sair" ao lado,
+                    que e texto — a acao rara e destrutiva chamava mais atencao
+                    que a frequente. O avatar com a inicial e o padrao que se
+                    le como "sua conta" sem precisar de rotulo. */}
                 <Link
                   href="/profile"
                   aria-label="Seu perfil"
                   aria-current={pathname === "/profile" ? "page" : undefined}
-                  className={cn(
-                    "inline-flex min-h-11 items-center gap-2 transition-colors hover:text-[var(--text)]",
-                    pathname === "/profile"
-                      ? "text-[var(--text)]"
-                      : "text-[var(--muted)]",
-                  )}
+                  className="inline-flex min-h-11 items-center gap-2 transition-opacity hover:opacity-80"
                 >
-                  <User size={17} strokeWidth={2} aria-hidden />
-                  <span className="hidden font-[family-name:var(--font-mono-face)] text-xs md:inline">
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "grid size-8 shrink-0 place-items-center rounded-full font-[family-name:var(--font-display-face)] text-sm font-bold",
+                      // Preenchido, nao contornado: e o unico elemento solido do
+                      // header, entao o olho vai nele primeiro.
+                      "bg-[var(--chalk)] text-black",
+                      // Na propria pagina, um anel destaca sem trocar a cor —
+                      // trocar faria o avatar sumir no fundo.
+                      pathname === "/profile" &&
+                        "ring-2 ring-[var(--chalk)] ring-offset-2 ring-offset-[var(--bg)]",
+                    )}
+                  >
+                    {inicialDe(user)}
+                  </span>
+                  <span className="hidden font-[family-name:var(--font-mono-face)] text-xs text-[var(--muted)] md:inline">
                     {user.email}
                   </span>
                 </Link>
+                {/* Menor e mais apagado que o avatar de proposito: sair e a
+                    acao que menos se quer acertar por engano. */}
                 <button
                   type="button"
                   onClick={logout}
-                  className="text-[var(--muted)] transition-colors hover:text-[var(--text)]"
+                  className="text-xs text-[var(--muted-2)] transition-colors hover:text-[var(--text)]"
                 >
                   Sair
                 </button>

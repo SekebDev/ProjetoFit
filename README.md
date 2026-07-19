@@ -1,4 +1,4 @@
-# RACK — ProjetoFit
+# Hipertrof.AI — ProjetoFit
 
 Aplicativo de treino de musculação: biblioteca de exercícios, planos manuais ou gerados por IA, registro de séries com timer de descanso, gráficos de progressão e uma camada de gamificação com XP, conquistas e ranking entre amigos.
 
