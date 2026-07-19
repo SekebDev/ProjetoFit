@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Dumbbell, BookOpen, Trophy, User } from "lucide-react-native";
+import { Text } from "react-native";
 
 export default function TabsLayout() {
   return (
@@ -19,34 +19,28 @@ export default function TabsLayout() {
         name="workouts"
         options={{
           title: "Treinos",
-          tabBarIcon: ({ color, size }) => (
-            <Dumbbell size={size} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20 }}>🏋️</Text>,
         }}
       />
       <Tabs.Screen
         name="exercises"
         options={{
           title: "Exercícios",
-          tabBarIcon: ({ color, size }) => (
-            <BookOpen size={size} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20 }}>📖</Text>,
         }}
       />
       <Tabs.Screen
         name="leaderboard"
         options={{
           title: "Ranking",
-          tabBarIcon: ({ color, size }) => (
-            <Trophy size={size} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20 }}>🏆</Text>,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: "Perfil",
-          tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20 }}>👤</Text>,
         }}
       />
     </Tabs>

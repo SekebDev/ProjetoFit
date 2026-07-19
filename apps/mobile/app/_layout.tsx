@@ -10,7 +10,6 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
-          animationEnabled: true,
         }}
       >
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
