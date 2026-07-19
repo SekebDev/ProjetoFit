@@ -156,5 +156,8 @@ export function fireConfetti(context: RackieContext): void {
     case "rest":
       // Descanso nao estoura confete — a Rackie so protege a recuperacao.
       break;
+    case "overtaken":
+      // Levar um passa-moleque tambem nao. Seria comemorar a derrota.
+      break;
   }
 }

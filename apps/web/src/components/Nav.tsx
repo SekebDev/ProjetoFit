@@ -1,6 +1,13 @@
 "use client";
 
-import { ClipboardList, Dumbbell, House, TrendingUp, User } from "lucide-react";
+import {
+  ClipboardList,
+  Dumbbell,
+  House,
+  TrendingUp,
+  User,
+  Users,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -13,15 +20,20 @@ interface NavLink {
   icon: LucideIcon;
 }
 
-// Cinco e o teto: a barra de baixo divide a largura igualmente, e uma sexta aba
-// deixaria cada alvo abaixo dos 44px de toque. Por isso /history nao esta aqui —
-// ela e alcancavel de dentro de /progress, que e de onde faz sentido procurar.
+// Cinco e o teto. Nao pelo alvo de toque — em 320px seis colunas ainda dariam
+// 53px cada, acima dos 44px recomendados — mas pelo ROTULO: "Biblioteca" em
+// 10px com tracking passa de 53px e comecaria a cortar. Por isso /history e
+// /achievements tambem nao estao aqui; sao alcancados de /progress e do painel.
+//
+// Grupos entrou no lugar de Perfil (que foi pro header, ao lado de "Sair"):
+// perfil se mexe uma vez por mes, grupo se abre pra ver se alguem te passou. A
+// barra do polegar deve refletir a frequencia de uso, nao o organograma do app.
 const LINKS: NavLink[] = [
   { href: "/", label: "Painel", icon: House },
   { href: "/exercises", label: "Biblioteca", icon: Dumbbell },
   { href: "/plans", label: "Planos", icon: ClipboardList },
   { href: "/progress", label: "Progresso", icon: TrendingUp },
-  { href: "/profile", label: "Perfil", icon: User },
+  { href: "/groups", label: "Grupos", icon: Users },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -73,9 +85,25 @@ export function Nav() {
           <div className="ml-auto flex items-center gap-3 text-sm">
             {user ? (
               <>
-                <span className="hidden font-[family-name:var(--font-mono-face)] text-xs text-[var(--muted)] md:inline">
-                  {user.email}
-                </span>
+                {/* Perfil saiu da barra de baixo, entao ESTE e o unico caminho
+                    ate ele no mobile — por isso o icone aparece sempre, e nao
+                    so a partir do md como o e-mail. */}
+                <Link
+                  href="/profile"
+                  aria-label="Seu perfil"
+                  aria-current={pathname === "/profile" ? "page" : undefined}
+                  className={cn(
+                    "inline-flex min-h-11 items-center gap-2 transition-colors hover:text-[var(--text)]",
+                    pathname === "/profile"
+                      ? "text-[var(--text)]"
+                      : "text-[var(--muted)]",
+                  )}
+                >
+                  <User size={17} strokeWidth={2} aria-hidden />
+                  <span className="hidden font-[family-name:var(--font-mono-face)] text-xs md:inline">
+                    {user.email}
+                  </span>
+                </Link>
                 <button
                   type="button"
                   onClick={logout}

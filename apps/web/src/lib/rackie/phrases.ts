@@ -15,7 +15,21 @@ export type RackieContext =
   | "day"
   | "rest"
   | "levelUp"
-  | "achievement";
+  | "achievement"
+  | "overtaken";
+
+/**
+ * Marcador que `pickPhrase` NAO resolve — quem chama troca pelo nome.
+ *
+ * Mora aqui, e nao espalhado pelas telas, pra que mudar o formato do marcador
+ * quebre num lugar so.
+ */
+export const MARCADOR_NOME = "{nome}";
+
+/** Troca o {nome} da frase pelo nome de quem passou na frente. */
+export function comNome(phrase: string, nome: string): string {
+  return phrase.split(MARCADOR_NOME).join(nome);
+}
 
 const POOLS: Record<RackieContext, readonly string[]> = {
   // Serie comum concluida: zoacao leve + empurrao pra proxima.
@@ -69,6 +83,16 @@ const POOLS: Record<RackieContext, readonly string[]> = {
     "Conquista na conta! Agora tem prova do que fez.",
     "Isso aí vale troféu. Guarda com carinho.",
     "Mais uma conquista. Tá colecionando, frango.",
+  ],
+  // Alguem do grupo passou na sua frente. Zoacao e desafio — nunca culpa, e
+  // nunca elogiando o outro as suas custas. O objetivo e te dar vontade de
+  // treinar hoje, nao te fazer sentir mal por nao ter treinado ontem.
+  overtaken: [
+    "{nome} te passou. Vai deixar barato, frango?",
+    "Olha só, {nome} tá na sua frente agora. Revida.",
+    "{nome} tomou seu lugar. Bora buscar de volta.",
+    "Perdeu posição pro {nome}. Isso aí tem volta, viu.",
+    "{nome} passou na sua frente enquanto você descansava. Reage!",
   ],
 };
 

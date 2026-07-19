@@ -32,6 +32,11 @@ const APRESENTACAO: Record<
   rest: { state: "rest", announce: false, burst: false },
   levelUp: { state: "cheer", announce: true, burst: true },
   achievement: { state: "cheer", announce: true, burst: true },
+  // Perder posicao nao se comemora: pose triste e nada de confete. A tela de
+  // ranking mostra esse contexto numa faixa fixa em vez do balao (o balao some
+  // em 2,2s e o aviso precisa continuar ali enquanto a pessoa le o ranking),
+  // mas a entrada existe pra que `say("overtaken")` nunca fique sem pose.
+  overtaken: { state: "sad", announce: true, burst: false },
 };
 
 interface Fala {
