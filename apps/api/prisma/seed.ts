@@ -1,7 +1,17 @@
 import { PrismaClient } from "@prisma/client";
 import { ACHIEVEMENTS } from "../src/game/catalog";
+import {
+  applyTranslation,
+  TranslationMapSchema,
+} from "../src/exercises/exercise-i18n";
+import translationsJson from "./exercise-translations.pt-BR.json";
 
 const prisma = new PrismaClient();
+
+// Traducao pt-BR de nome/instrucoes, chaveada por slug. Validada na carga pra
+// falhar cedo: um JSON corrompido derruba o seed aqui, nao no meio dos upserts.
+// Vazio = tudo em ingles (fallback do applyTranslation).
+const translations = TranslationMapSchema.parse(translationsJson);
 
 const DB_URL =
   "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json";
@@ -77,16 +87,21 @@ async function main(): Promise<void> {
 
   const data = withImages.map((e) => {
     const category = e.mechanic === "compound" ? "COMPOUND" : "ISOLATION";
-    return {
-      slug: e.id,
-      name: e.name,
-      muscleGroup: mapMuscle(e.primaryMuscles ?? []),
-      category,
-      equipment: mapEquip(e.equipment),
-      imageUrl: IMG_BASE + e.images[0],
-      instructions: (e.instructions ?? []).join("\n") || null,
-      defaultRestSec: category === "COMPOUND" ? 120 : 60,
-    };
+    // Objeto em ingles da fonte; applyTranslation sobrepoe name/instructions em
+    // pt-BR quando ha traducao pro slug, senao mantem o ingles. Nunca toca slug.
+    return applyTranslation(
+      {
+        slug: e.id,
+        name: e.name,
+        muscleGroup: mapMuscle(e.primaryMuscles ?? []),
+        category,
+        equipment: mapEquip(e.equipment),
+        imageUrl: IMG_BASE + e.images[0],
+        instructions: (e.instructions ?? []).join("\n") || null,
+        defaultRestSec: category === "COMPOUND" ? 120 : 60,
+      },
+      translations,
+    );
   });
 
   // Upsert por slug, nunca deleteMany: os planos referenciam Exercise.id, e
