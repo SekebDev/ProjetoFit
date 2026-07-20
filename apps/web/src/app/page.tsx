@@ -395,6 +395,13 @@ function Vitrine() {
             >
               Ver biblioteca
             </Link>
+            <a
+              href="/app/hipertrof.apk"
+              download
+              className="inline-flex min-h-11 items-center rounded-md bg-[var(--m-legs)] px-5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              📱 Baixar App
+            </a>
           </div>
         </div>
 
