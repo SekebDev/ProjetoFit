@@ -1,11 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "./api";
 import type {
+  ActiveSession,
+  Deload,
   Exercise,
   GroupSummary,
   Leaderboard,
+  NextWorkout,
   PlanSummary,
+  ProgressSummary,
   PublicUser,
+  Streak,
 } from "./types";
 
 /** GET /plans — resumo, sem os dias. */
@@ -69,6 +74,70 @@ export function useProfile() {
     queryFn: async () => {
       const { data } = await api.get("/api/auth/me");
       return data;
+    },
+  });
+}
+
+/**
+ * GET /plans/next-workout — o proximo treino sugerido no painel.
+ * Devolve null quando nao ha plano ativo; a UI mostra o vazio.
+ */
+export function useNextWorkout() {
+  return useQuery<NextWorkout | null>({
+    queryKey: ["next-workout"],
+    queryFn: async () => {
+      const { data } = await api.get("/api/plans/next-workout");
+      // Sem plano ativo a API pode devolver null OU corpo vazio (""): as duas
+      // viram null pra tela mostrar o vazio em vez de renderizar lixo.
+      return data || null;
+    },
+  });
+}
+
+/** GET /progress/streak — a sequencia de treinos pro painel. */
+export function useStreak() {
+  return useQuery<Streak>({
+    queryKey: ["streak"],
+    queryFn: async () => {
+      const { data } = await api.get("/api/progress/streak");
+      return data;
+    },
+  });
+}
+
+/** GET /progress/deload — recomendacao de semana leve. */
+export function useDeload() {
+  return useQuery<Deload>({
+    queryKey: ["deload"],
+    queryFn: async () => {
+      const { data } = await api.get("/api/progress/deload");
+      return data;
+    },
+  });
+}
+
+/** GET /progress/summary — volume semanal e recordes pra tela de progresso. */
+export function useProgressSummary() {
+  return useQuery<ProgressSummary>({
+    queryKey: ["progress-summary"],
+    queryFn: async () => {
+      const { data } = await api.get("/api/progress/summary");
+      return data;
+    },
+  });
+}
+
+/**
+ * GET /sessions/active — a sessao em aberto, ou null.
+ * O painel usa pra oferecer "retomar treino" quando ha um em curso.
+ */
+export function useActiveSession() {
+  return useQuery<ActiveSession | null>({
+    queryKey: ["active-session"],
+    queryFn: async () => {
+      const { data } = await api.get("/api/sessions/active");
+      // Sem sessao em aberto: null ou corpo vazio ("") — ambos viram null.
+      return data || null;
     },
   });
 }

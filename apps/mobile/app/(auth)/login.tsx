@@ -1,10 +1,12 @@
-import { View, Text, TextInput, Pressable } from "react-native";
+import { Text, TextInput, View } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { z } from "zod";
 import { api } from "@/lib/api";
 import { tokenStorage } from "@/lib/storage";
 import { getAuthErrorMessage } from "@/lib/errors";
+import { PrimaryButton, Screen } from "@/components/ui";
+import { colors } from "@/lib/theme";
 
 // Espelha LoginSchema da API: senha so precisa nao estar vazia. Exigir mais
 // aqui barraria contas antigas com senha curta.
@@ -17,6 +19,9 @@ const credentialsSchema = z.object({
 const authResponseSchema = z.object({
   token: z.string().min(1),
 });
+
+const inputClass =
+  "rounded-xl border border-border bg-surface px-4 py-3.5 font-body text-text mb-4";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -43,7 +48,7 @@ export default function LoginScreen() {
       }
 
       await tokenStorage.setToken(parsed.data.token);
-      router.replace("/(tabs)/workouts");
+      router.replace("/(tabs)");
     } catch (err: unknown) {
       setError(getAuthErrorMessage(err));
     } finally {
@@ -52,67 +57,67 @@ export default function LoginScreen() {
   };
 
   return (
-    <View className="flex-1 bg-[#0e1014] px-6 justify-center">
-      <Text className="text-white text-3xl font-bold mb-2">Hipertrof.AI</Text>
-      <Text className="text-gray-400 mb-8">Faça login para começar</Text>
-
-      {error ? (
-        <Text
-          accessibilityRole="alert"
-          className="text-red-400 mb-4 text-center"
-        >
-          {error}
+    <Screen>
+      <View className="flex-1 justify-center px-6">
+        <Text className="mb-1 font-display text-3xl text-chalk">
+          Hipertrof.AI
         </Text>
-      ) : null}
-
-      <TextInput
-        placeholder="Email"
-        placeholderTextColor="#6b7280"
-        value={email}
-        onChangeText={setEmail}
-        editable={!loading}
-        autoCapitalize="none"
-        autoComplete="email"
-        keyboardType="email-address"
-        accessibilityLabel="Email"
-        className="bg-gray-900 text-white px-4 py-3 rounded-lg mb-4 border border-gray-700"
-      />
-
-      <TextInput
-        placeholder="Senha"
-        placeholderTextColor="#6b7280"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        editable={!loading}
-        autoCapitalize="none"
-        autoComplete="current-password"
-        accessibilityLabel="Senha"
-        className="bg-gray-900 text-white px-4 py-3 rounded-lg mb-6 border border-gray-700"
-      />
-
-      <Pressable
-        onPress={handleLogin}
-        disabled={loading}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: loading }}
-        className="bg-purple-600 py-3 rounded-lg mb-4"
-      >
-        <Text className="text-white text-center font-semibold">
-          {loading ? "Carregando..." : "Entrar"}
+        <Text className="mb-8 font-body text-muted">
+          Faça login para começar
         </Text>
-      </Pressable>
 
-      <Text className="text-gray-400 text-center text-sm">
-        Ainda não tem conta?{" "}
-        <Text
-          accessibilityRole="link"
-          className="text-purple-400 font-semibold"
-          onPress={() => router.push("/(auth)/signup")}
-        >
-          Crie uma
+        {error ? (
+          <Text
+            accessibilityRole="alert"
+            className="mb-4 text-center font-body text-m-chest"
+          >
+            {error}
+          </Text>
+        ) : null}
+
+        <TextInput
+          placeholder="Email"
+          placeholderTextColor={colors.muted2}
+          value={email}
+          onChangeText={setEmail}
+          editable={!loading}
+          autoCapitalize="none"
+          autoComplete="email"
+          keyboardType="email-address"
+          accessibilityLabel="Email"
+          className={inputClass}
+        />
+
+        <TextInput
+          placeholder="Senha"
+          placeholderTextColor={colors.muted2}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          editable={!loading}
+          autoCapitalize="none"
+          autoComplete="current-password"
+          accessibilityLabel="Senha"
+          className={`${inputClass} mb-6`}
+        />
+
+        <PrimaryButton
+          label={loading ? "Carregando..." : "Entrar"}
+          onPress={handleLogin}
+          disabled={loading}
+        />
+
+        <Text className="mt-4 text-center font-body text-sm text-muted">
+          Ainda não tem conta?{" "}
+          <Text
+            accessibilityRole="link"
+            className="font-body-semibold text-chalk"
+            onPress={() => router.push("/(auth)/signup")}
+          >
+            Crie uma
+          </Text>
         </Text>
-      </Text>
-    </View>
+      </View>
+    </Screen>
   );
 }

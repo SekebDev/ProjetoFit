@@ -113,7 +113,7 @@ describe("SignupScreen — cadastro bem sucedido", () => {
       });
     });
     expect(mockedStorage.setToken).toHaveBeenCalledWith("token-abc");
-    expect(global.mockRouter.replace).toHaveBeenCalledWith("/(tabs)/workouts");
+    expect(global.mockRouter.replace).toHaveBeenCalledWith("/(tabs)");
   });
 });
 

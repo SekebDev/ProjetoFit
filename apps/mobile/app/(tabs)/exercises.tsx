@@ -1,96 +1,67 @@
-import {
-  View,
-  Text,
-  TextInput,
-  FlatList,
-  ActivityIndicator,
-} from "react-native";
 import { useState } from "react";
+import { FlatList, Text, TextInput, View } from "react-native";
+import {
+  Card,
+  EmptyState,
+  ErrorState,
+  Header,
+  LoadingState,
+  MuscleDot,
+  Screen,
+} from "@/components/ui";
+import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { useExercises } from "@/lib/hooks";
-import { MUSCLE_GROUP_LABELS, type Exercise } from "@/lib/types";
+import { colors } from "@/lib/theme";
+import { MUSCLE_GROUP_LABELS } from "@/lib/types";
 
-export default function ExercisesScreen() {
+export default function BibliotecaScreen() {
   const [search, setSearch] = useState("");
   const { data: exercises, isLoading, error } = useExercises(search);
 
   return (
-    <View className="flex-1 bg-[#0e1014]">
-      <View className="px-6 py-4 border-b border-gray-800">
-        <Text className="text-white text-2xl font-bold mb-3">📖 Biblioteca</Text>
+    <Screen>
+      <Header title="Biblioteca" right={<ProfileAvatar />} />
+      <View className="px-4 pt-4">
         <TextInput
-          placeholder="Buscar exercício"
-          placeholderTextColor="#6b7280"
+          placeholder="Buscar exercicio"
+          placeholderTextColor={colors.muted2}
           value={search}
           onChangeText={setSearch}
           autoCapitalize="none"
-          accessibilityLabel="Buscar exercício"
-          className="bg-gray-900 text-white px-4 py-2 rounded-lg border border-gray-700"
+          accessibilityLabel="Buscar exercicio"
+          className="rounded-xl border border-border bg-surface px-4 py-3 font-body text-text"
         />
       </View>
 
-      <ExerciseList exercises={exercises} isLoading={isLoading} error={error} />
-    </View>
-  );
-}
-
-type ExerciseListProps = {
-  exercises: Exercise[] | undefined;
-  isLoading: boolean;
-  error: unknown;
-};
-
-function ExerciseList({ exercises, isLoading, error }: ExerciseListProps) {
-  if (isLoading) {
-    return (
-      <View className="flex-1 justify-center items-center">
-        <ActivityIndicator size="large" color="#a78bfa" />
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View className="flex-1 justify-center items-center px-6">
-        <Text accessibilityRole="alert" className="text-red-400 text-center">
-          Nao foi possivel carregar os exercicios.
-        </Text>
-      </View>
-    );
-  }
-
-  if (!exercises || exercises.length === 0) {
-    return (
-      <View className="flex-1 justify-center items-center px-6">
-        <Text className="text-gray-400 text-center">
-          Nenhum exercício encontrado
-        </Text>
-      </View>
-    );
-  }
-
-  return (
-    <FlatList
-      data={exercises}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12 }}
-      renderItem={({ item }) => (
-        <View className="bg-gray-900 rounded-lg p-4 mb-4 border border-gray-800">
-          <Text className="text-white font-semibold">{item.name}</Text>
-
-          {item.instructions ? (
-            <Text
-              numberOfLines={2}
-              className="text-gray-400 text-sm mt-2"
-            >
-              {item.instructions}
-            </Text>
-          ) : null}
-
-          <Text className="text-[#a78bfa] text-xs mt-3">
-            {MUSCLE_GROUP_LABELS[item.muscleGroup]}
-          </Text>
-        </View>
+      {isLoading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState message="Nao foi possivel carregar a biblioteca." />
+      ) : !exercises || exercises.length === 0 ? (
+        <EmptyState
+          title="Nenhum exercicio encontrado"
+          subtitle={search ? "Tente outro termo." : undefined}
+        />
+      ) : (
+        <FlatList
+          data={exercises}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ padding: 16, gap: 10 }}
+          renderItem={({ item }) => (
+            <Card className="flex-row items-center gap-3">
+              <MuscleDot group={item.muscleGroup} />
+              <View className="flex-1">
+                <Text className="font-body-semibold text-base text-text">
+                  {item.name}
+                </Text>
+                <Text className="mt-0.5 font-body text-xs text-muted">
+                  {MUSCLE_GROUP_LABELS[item.muscleGroup]}
+                </Text>
+              </View>
+            </Card>
+          )}
+        />
       )}
-    />
+    </Screen>
   );
 }

@@ -88,6 +88,77 @@ export type Leaderboard = {
   entries: LeaderboardEntry[];
 };
 
+/** GET /plans/next-workout — o proximo treino sugerido no painel. */
+export type NextWorkout = {
+  planId: string;
+  planName: string;
+  planDayId: string;
+  name: string;
+  focus: string | null;
+  weekday: number | null;
+  isToday: boolean;
+};
+
+export type StreakState =
+  | "unscheduled"
+  | "idle"
+  | "active"
+  | "resting"
+  | "atRisk";
+
+/** GET /progress/streak. */
+export type Streak = {
+  current: number;
+  best: number;
+  state: StreakState;
+  scheduledToday: boolean;
+  trainedToday: boolean;
+};
+
+/** GET /progress/deload. */
+export type Deload = {
+  recommend: boolean;
+  reason: "FATIGUE" | "CYCLE" | "BOTH" | null;
+  lastWeekVolume: number | null;
+  baselineVolume: number | null;
+  dropPct: number | null;
+  hardWeekStreak: number;
+};
+
+export type WeeklyVolume = {
+  weekStart: string;
+  volume: number;
+  sessionCount: number;
+};
+
+export type PersonalRecord = {
+  exercise: { id: string; name: string };
+  maxWeightKg: number | null;
+  maxWeightDate: string | null;
+  maxVolume: number | null;
+  maxVolumeDate: string | null;
+};
+
+/** GET /progress/summary. */
+export type ProgressSummary = {
+  weeklyVolume: WeeklyVolume[];
+  records: PersonalRecord[];
+  totalSessions: number;
+};
+
+/**
+ * GET /sessions/active — a sessao em aberto, ou null.
+ *
+ * Subconjunto de Session: o painel so precisa saber que ha um treino em curso e
+ * como rotular o card pra retomar. A tela de treino busca o resto sozinha.
+ */
+export type ActiveSession = {
+  id: string;
+  planDayId: string | null;
+  planDay: { name: string } | null;
+  date: string;
+};
+
 /** Rotulos pt-BR para os enums que a API devolve em ingles. */
 export const MUSCLE_GROUP_LABELS: Record<MuscleGroup, string> = {
   CHEST: "Peito",

@@ -8,7 +8,7 @@ export default function RootIndex() {
   useEffect(() => {
     async function checkAuth() {
       const token = await tokenStorage.getToken();
-      router.replace(token ? "/(tabs)/workouts" : "/(auth)/login");
+      router.replace(token ? "/(tabs)" : "/(auth)/login");
     }
 
     checkAuth();

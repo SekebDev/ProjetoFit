@@ -80,7 +80,7 @@ describe("LoginScreen — validacao", () => {
 });
 
 describe("LoginScreen — login bem sucedido", () => {
-  it("guarda o token e navega para os treinos", async () => {
+  it("guarda o token e navega para o painel", async () => {
     mockedApi.post.mockResolvedValue({
       data: { token: "token-abc", user: { id: "1" } },
     });
@@ -92,7 +92,7 @@ describe("LoginScreen — login bem sucedido", () => {
     await waitFor(() => {
       expect(mockedStorage.setToken).toHaveBeenCalledWith("token-abc");
     });
-    expect(global.mockRouter.replace).toHaveBeenCalledWith("/(tabs)/workouts");
+    expect(global.mockRouter.replace).toHaveBeenCalledWith("/(tabs)");
   });
 
   it("manda o email sem espacos das bordas", async () => {

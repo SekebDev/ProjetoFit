@@ -4,11 +4,16 @@ import MockAdapter from "axios-mock-adapter";
 import type { ReactNode } from "react";
 import { api } from "../api";
 import {
+  useActiveSession,
+  useDeload,
   useExercises,
   useGroupLeaderboard,
   useGroups,
+  useNextWorkout,
   usePlans,
   useProfile,
+  useProgressSummary,
+  useStreak,
 } from "../hooks";
 
 jest.mock("../storage", () => ({
@@ -113,5 +118,79 @@ describe("useGroupLeaderboard", () => {
     // Sem isso, a URL viraria /api/groups/undefined/leaderboard.
     expect(result.current.fetchStatus).toBe("idle");
     expect(apiMock.history.get).toHaveLength(0);
+  });
+});
+
+describe("useNextWorkout", () => {
+  it("bate em GET /api/plans/next-workout", async () => {
+    apiMock
+      .onGet("/api/plans/next-workout")
+      .reply(200, { planId: "p1", name: "Push", isToday: true });
+
+    const { result } = await renderHook(() => useNextWorkout(), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(apiMock.history.get[0].url).toBe("/api/plans/next-workout");
+  });
+
+  it("vira null quando nao ha plano ativo", async () => {
+    // Sem plano a API responde 200 com corpo vazio; o hook normaliza pra null
+    // pra tela mostrar o vazio em vez de quebrar.
+    apiMock.onGet("/api/plans/next-workout").reply(200, "");
+
+    const { result } = await renderHook(() => useNextWorkout(), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toBeNull();
+  });
+});
+
+describe("useStreak", () => {
+  it("bate em GET /api/progress/streak", async () => {
+    apiMock
+      .onGet("/api/progress/streak")
+      .reply(200, { current: 3, best: 5, state: "active" });
+
+    const { result } = await renderHook(() => useStreak(), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.current).toBe(3);
+  });
+});
+
+describe("useDeload", () => {
+  it("bate em GET /api/progress/deload", async () => {
+    apiMock
+      .onGet("/api/progress/deload")
+      .reply(200, { recommend: false, reason: null });
+
+    const { result } = await renderHook(() => useDeload(), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.recommend).toBe(false);
+  });
+});
+
+describe("useProgressSummary", () => {
+  it("bate em GET /api/progress/summary", async () => {
+    apiMock
+      .onGet("/api/progress/summary")
+      .reply(200, { weeklyVolume: [], records: [], totalSessions: 0 });
+
+    const { result } = await renderHook(() => useProgressSummary(), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.totalSessions).toBe(0);
+  });
+});
+
+describe("useActiveSession", () => {
+  it("vira null quando nao ha sessao em aberto", async () => {
+    apiMock.onGet("/api/sessions/active").reply(200, "");
+
+    const { result } = await renderHook(() => useActiveSession(), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toBeNull();
   });
 });
