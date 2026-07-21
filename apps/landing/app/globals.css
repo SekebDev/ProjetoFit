@@ -1,0 +1,197 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-anton);
+  --font-heading: var(--font-anton);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-surface-2: var(--surface-2);
+  --color-chalk: var(--chalk);
+  --color-muted-2: var(--muted-2);
+  --color-m-chest: var(--m-chest);
+  --color-m-back: var(--m-back);
+  --color-m-shoulders: var(--m-shoulders);
+  --color-m-arms: var(--m-arms);
+  --color-m-legs: var(--m-legs);
+  --color-m-core: var(--m-core);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Paleta do app web (apps/web/src/app/globals.css), dark-only como o app.
+   Espelhada em lib/palette.ts pro lado JS — mudou aqui, mude lá. */
+:root {
+  --background: #0e1014;
+  --foreground: #e9ebef;
+  --card: #171a21;
+  --card-foreground: #e9ebef;
+  --popover: #1e222b;
+  --popover-foreground: #e9ebef;
+  --primary: #f2f4f7;
+  --primary-foreground: #000000;
+  --secondary: #1e222b;
+  --secondary-foreground: #e9ebef;
+  --muted: #1e222b;
+  --muted-foreground: #949aa6;
+  --accent: #1e222b;
+  --accent-foreground: #f2f4f7;
+  --destructive: #e5484d;
+  --border: #2a2f3a;
+  --input: #2a2f3a;
+  --ring: #f2f4f7;
+  --chart-1: #e5484d;
+  --chart-2: #3e7bfa;
+  --chart-3: #e6a817;
+  --chart-4: #9b72f2;
+  --chart-5: #3da35d;
+  --radius: 0.625rem;
+  --sidebar: #171a21;
+  --sidebar-foreground: #e9ebef;
+  --sidebar-primary: #f2f4f7;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #1e222b;
+  --sidebar-accent-foreground: #f2f4f7;
+  --sidebar-border: #2a2f3a;
+  --sidebar-ring: #f2f4f7;
+
+  /* extras da marca */
+  --surface-2: #1e222b;
+  --chalk: #f2f4f7;
+  --muted-2: #6b7280;
+
+  /* cores de anilha por grupo muscular */
+  --m-chest: #e5484d;
+  --m-back: #3e7bfa;
+  --m-shoulders: #e6a817;
+  --m-arms: #9b72f2;
+  --m-legs: #3da35d;
+  --m-core: #22b8cf;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+    color-scheme: dark;
+  }
+  ::selection {
+    background: var(--chalk);
+    color: #000;
+  }
+}
+
+/* Camadas de densidade de fundo — sempre em elementos decorativos aria-hidden. */
+
+/* Grade de diário de treino: o quadriculado onde se anota série e carga. */
+.logbook-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(242, 244, 247, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(242, 244, 247, 0.045) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(
+    ellipse 80% 70% at 50% 45%,
+    black 25%,
+    transparent 78%
+  );
+  mask-image: radial-gradient(
+    ellipse 80% 70% at 50% 45%,
+    black 25%,
+    transparent 78%
+  );
+}
+
+/* Holofote de ginásio: ilumina o centro da cena em vez de deixar o void. */
+.spotlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 68% 52% at 50% 40%,
+    rgba(242, 244, 247, 0.075),
+    transparent 70%
+  );
+}
+
+/* Serrilhado de pegada da barra (knurling): hachura cruzada em faixas finas. */
+.knurl {
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      rgba(242, 244, 247, 0.11) 0 1px,
+      transparent 1px 5px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(242, 244, 247, 0.11) 0 1px,
+      transparent 1px 5px
+    );
+}
+
+/* Granulado de giz por cima de tudo: textura de academia sutil, estática e
+   barata (SVG inline, sem request). pointer-events none — só atmosfera. */
+body::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Kill-switch global de movimento, igual ao app web: cobre o que o gate de
+   JS (matchMedia nos componentes) não alcançar. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

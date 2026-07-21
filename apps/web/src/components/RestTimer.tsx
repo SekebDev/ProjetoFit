@@ -2,6 +2,7 @@
 
 import { Minus, Plus, SkipForward } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { RestGame } from "@/components/games/RestGame";
 
 const AJUSTE_MS = 15_000;
 /** So repinta a tela; quem conta o tempo e o relogio do sistema. */
@@ -145,6 +146,10 @@ export function RestTimer({ seconds, onDone }: RestTimerProps) {
           Descanso concluído.
         </p>
       ) : null}
+
+      {/* Modo Dopamina: aparece so se o perfil ligou. Vive dentro do RestTimer,
+          entao some junto quando o descanso acaba e o timer desmonta. */}
+      <RestGame />
     </div>
   );
 }

@@ -14,6 +14,8 @@ const baseRow = {
   focusAreas: ["UPPER"],
   equipment: ["BARBELL"],
   injuries: null,
+  dopamineMode: true,
+  dopamineGames: ["FLAPPY"],
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -39,11 +41,16 @@ describe("ProfileService", () => {
       focusAreas: ["UPPER"],
       equipment: ["BARBELL"],
       injuries: null,
+      dopamineMode: false,
+      dopamineGames: [],
     });
     expect(upsert).toHaveBeenCalledWith(
       expect.objectContaining({ where: { userId: "u1" } }),
     );
     expect(typeof res.updatedAt).toBe("string");
     expect(res.goal).toBe("HYPERTROPHY");
+    // Modo Dopamina sobrevive a ida-e-volta pelo mapper.
+    expect(res.dopamineMode).toBe(true);
+    expect(res.dopamineGames).toEqual(["FLAPPY"]);
   });
 });

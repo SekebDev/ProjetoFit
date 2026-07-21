@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  DOPAMINE_GAMES,
   EQUIPMENT,
   EXPERIENCES,
   FOCUS_AREAS,
@@ -9,6 +10,7 @@ import {
   type Profile,
   type UpdateProfileInput,
 } from "@workout/shared";
+import { GAME_LABELS } from "@/lib/games/registry";
 import { EQUIP_LABELS } from "@/lib/meta";
 import { cn, numOrNull } from "@/lib/utils";
 
@@ -71,6 +73,12 @@ export function ProfileForm({ initial, onSubmit, saving, saved }: Props) {
   const [heightCm, setHeightCm] = useState(initial?.heightCm?.toString() ?? "");
   const [weightKg, setWeightKg] = useState(initial?.weightKg?.toString() ?? "");
   const [injuries, setInjuries] = useState(initial?.injuries ?? "");
+  const [dopamineMode, setDopamineMode] = useState(
+    initial?.dopamineMode ?? false,
+  );
+  const [dopamineGames, setDopamineGames] = useState<
+    UpdateProfileInput["dopamineGames"]
+  >(initial?.dopamineGames ?? []);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,6 +93,8 @@ export function ProfileForm({ initial, onSubmit, saving, saved }: Props) {
       heightCm: numOrNull(heightCm),
       weightKg: numOrNull(weightKg),
       injuries: injuries.trim() || null,
+      dopamineMode,
+      dopamineGames,
     });
   }
 
@@ -183,6 +193,49 @@ export function ProfileForm({ initial, onSubmit, saving, saved }: Props) {
           placeholder="Ex.: ombro direito sensivel em supino inclinado"
           className="w-full rounded-md border bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] placeholder:text-[var(--muted-2)] focus:border-[var(--muted)]"
         />
+      </Field>
+
+      <Field label="Modo Dopamina">
+        <div className="flex items-center justify-between gap-4 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5">
+          <span className="text-sm text-[var(--muted)]">
+            Minigame no tempo de descanso
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={dopamineMode}
+            aria-label="Ativar Modo Dopamina"
+            onClick={() => setDopamineMode((v) => !v)}
+            className={cn(
+              "relative h-6 w-11 shrink-0 rounded-full border transition-colors",
+              dopamineMode
+                ? "border-[var(--chalk)] bg-[var(--chalk)]"
+                : "border-[var(--border)] bg-[var(--surface-2)]",
+            )}
+          >
+            <span
+              className={cn(
+                "absolute top-0.5 size-4 rounded-full bg-black transition-transform",
+                dopamineMode ? "translate-x-5" : "translate-x-0.5",
+              )}
+            />
+          </button>
+        </div>
+        {dopamineMode ? (
+          <div className="mt-3">
+            <p className="mb-2 font-[family-name:var(--font-mono-face)] text-[11px] uppercase tracking-[0.2em] text-[var(--muted)]">
+              Jogos (vazio = todos)
+            </p>
+            <ChipGroup
+              options={DOPAMINE_GAMES.map((g) => ({
+                value: g,
+                label: GAME_LABELS[g],
+              }))}
+              selected={dopamineGames}
+              onToggle={(v) => setDopamineGames((prev) => toggle(prev, v))}
+            />
+          </div>
+        ) : null}
       </Field>
 
       <div className="flex items-center gap-4 border-t pt-6">

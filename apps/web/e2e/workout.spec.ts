@@ -176,6 +176,37 @@ test.describe("Treino", () => {
     expect(paraSegundos(depois)).toBeGreaterThan(paraSegundos(antes));
   });
 
+  // Modo Dopamina: com o modo ligado no perfil, o descanso mostra o minigame; ao
+  // pular o descanso, o timer desmonta e o jogo vai junto (vive dentro dele).
+  test("modo dopamina mostra o minigame no descanso e some ao pular", async ({
+    page,
+  }) => {
+    await registrar(page); // cai em /profile
+
+    // Liga o modo e fixa o Flappy pra a asserção do rótulo ser determinística.
+    await page
+      .getByRole("switch", { name: /ativar modo dopamina/i })
+      .click();
+    await page.getByRole("button", { name: /^flappy$/i }).click();
+    await page.getByRole("button", { name: /salvar perfil/i }).click();
+    await expect(page.getByText(/perfil salvo/i)).toBeVisible();
+
+    await criaPlano(page, "Dopamina E2E");
+    await iniciaTreino(page);
+
+    await registraSerie(page, 1, "60", "10");
+
+    // Descanso começou: timer e minigame juntos.
+    await expect(page.getByRole("timer")).toBeVisible();
+    await expect(page.getByTestId("rest-game")).toBeVisible();
+    await expect(page.getByText(/modo dopamina · flappy/i)).toBeVisible();
+
+    // Pular encerra o descanso: o timer some e o jogo desmonta junto.
+    await page.getByRole("button", { name: /pular/i }).click();
+    await expect(page.getByRole("timer")).toBeHidden();
+    await expect(page.getByTestId("rest-game")).toBeHidden();
+  });
+
   test("exige login pra treinar", async ({ page }) => {
     await page.goto("/workout/qualquer-id");
 

@@ -17,6 +17,8 @@ function toProfile(row: PrismaProfile): Profile {
     focusAreas: row.focusAreas as Profile["focusAreas"],
     equipment: row.equipment as Profile["equipment"],
     injuries: row.injuries,
+    dopamineMode: row.dopamineMode,
+    dopamineGames: row.dopamineGames as Profile["dopamineGames"],
     updatedAt: row.updatedAt.toISOString(),
   };
 }
