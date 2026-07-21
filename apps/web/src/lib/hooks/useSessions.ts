@@ -15,6 +15,9 @@ export function useSessionHistory() {
   return useQuery({
     queryKey: ["sessions"],
     queryFn: () => apiFetch<SessionSummary[]>("/sessions"),
+    // Treinar num aparelho e abrir o historico em outro tem que mostrar a
+    // sessao nova ao voltar pra tela/foco (staleTime: 0), sem F5.
+    staleTime: 0,
   });
 }
 
