@@ -120,6 +120,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Avisa o web que o app voltou ao primeiro plano pra ele revalidar os
+        // dados (React Query) sem F5. O WebView nem sempre dispara o
+        // visibilitychange que o web escutaria sozinho, entao o sinal vem
+        // explicitamente daqui (ponte: focus-refetch.ts).
+        //
+        // O `?.()` no JS protege a corrida do primeiro start: no onResume inicial
+        // o bundle ainda nao instalou a ponte, entao a chamada vira no-op seguro.
+        webView.evaluateJavascript("window.__notifyAppResumed?.()", null)
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         webView.saveState(outState)

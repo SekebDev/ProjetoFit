@@ -18,6 +18,9 @@ export function useProgressSummary() {
       apiFetch<ProgressSummary>(
         `/progress/summary?tz=${encodeURIComponent(tz)}`,
       ),
+    // Revalida ao voltar pra tela/foco: treinar em outro aparelho tem que
+    // refletir no grafico sem F5 (staleTime: 0, no ritmo do resto do progresso).
+    staleTime: 0,
   });
 }
 
@@ -27,6 +30,8 @@ export function useDeload() {
     queryKey: ["progress-deload", tz],
     queryFn: () =>
       apiFetch<Deload>(`/progress/deload?tz=${encodeURIComponent(tz)}`),
+    // Aviso de deload muda com o volume da semana: revalida ao voltar (0), sem F5.
+    staleTime: 0,
   });
 }
 

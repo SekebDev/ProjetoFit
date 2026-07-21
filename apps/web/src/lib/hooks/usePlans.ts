@@ -16,6 +16,9 @@ export function usePlans() {
   return useQuery({
     queryKey: ["plans"],
     queryFn: () => apiFetch<PlanSummary[]>("/plans"),
+    // Editar/ativar/criar num aparelho tem que aparecer em outro ao voltar pra
+    // lista: staleTime: 0 revalida ao renavegar e ao reganhar foco, sem F5.
+    staleTime: 0,
   });
 }
 
@@ -32,6 +35,9 @@ export function useNextWorkout() {
       apiFetch<NextWorkout | null>(
         `/plans/next-workout?tz=${encodeURIComponent(tz)}`,
       ),
+    // O painel e a primeira tela ao voltar pro app: a sugestao do dia tem que
+    // estar fresca no foco/renavegacao, no ritmo de game/streak (staleTime: 0).
+    staleTime: 0,
   });
 }
 

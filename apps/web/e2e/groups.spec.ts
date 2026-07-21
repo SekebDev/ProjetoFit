@@ -73,6 +73,39 @@ test.describe("grupos", () => {
     await contextoAmiga.close();
   });
 
+  test("dono ve quem entrou ao voltar o foco, sem F5", async ({ browser }) => {
+    const contextoDona = await browser.newContext();
+    const paginaDona = await contextoDona.newPage();
+    await registrar(paginaDona, "Dona");
+    const codigo = await criaGrupo(paginaDona, "Grupo do Foco");
+
+    // So a dona ate aqui.
+    await expect(paginaDona.getByText("1 participante")).toBeVisible();
+
+    // Amiga entra pelo codigo, noutro contexto (outro "aparelho").
+    const contextoAmiga = await browser.newContext();
+    const paginaAmiga = await contextoAmiga.newPage();
+    await registrar(paginaAmiga, "Amiga");
+    await paginaAmiga.goto("/groups");
+    await paginaAmiga.getByLabel(/entrar com código/i).fill(codigo);
+    await paginaAmiga.getByRole("button", { name: /^entrar$/i }).click();
+    await paginaAmiga.waitForURL(/\/groups\/[^/]+$/);
+
+    // De volta na tela da dona: SEM reload. So o "app voltou ao foco" — o mesmo
+    // gancho que o WebView Android chama no onResume — deve revalidar a lista.
+    await paginaDona.evaluate(() => {
+      (
+        window as unknown as { __notifyAppResumed?: () => void }
+      ).__notifyAppResumed?.();
+    });
+
+    await expect(paginaDona.getByText("Amiga")).toBeVisible();
+    await expect(paginaDona.getByText("2 participantes")).toBeVisible();
+
+    await contextoDona.close();
+    await contextoAmiga.close();
+  });
+
   test("codigo inexistente explica o que houve, sem erro cru", async ({
     page,
   }) => {
