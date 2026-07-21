@@ -16,6 +16,10 @@ export function useGroups() {
   return useQuery({
     queryKey: ["groups"],
     queryFn: () => apiFetch<GroupSummary[]>("/groups"),
+    // Dado "vivo": o numero de participantes muda quando OUTROS entram/saem.
+    // staleTime: 0 revalida ao voltar pra tela e ao reganhar foco (o resume do
+    // WebView cai aqui via focus-refetch.ts), em vez de servir o cache ate F5.
+    staleTime: 0,
   });
 }
 
@@ -31,6 +35,9 @@ export function useGroup(id: string) {
     queryKey: ["group", id],
     queryFn: () => apiFetch<Group>(`/groups/${encodeURIComponent(id)}`),
     enabled: Boolean(id),
+    // A lista de membros muda quando OUTROS entram/saem: revalida ao voltar pra
+    // tela/foco (staleTime: 0), sem depender de F5 pra ver quem entrou.
+    staleTime: 0,
   });
 }
 
