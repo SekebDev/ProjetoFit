@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { FlappyGame } from "@/components/games/FlappyGame";
+import { GameOverlay } from "@/components/games/GameOverlay";
 import { SnakeGame } from "@/components/games/SnakeGame";
 import { useAuth } from "@/lib/auth";
 import { GAME_LABELS, pickDopamineGame } from "@/lib/games/registry";
@@ -18,36 +19,70 @@ function rngFromSeed(seed: number): () => number {
   };
 }
 
+interface RestGameProps {
+  /** Tempo restante já formatado (mm:ss), pro HUD do overlay. */
+  tempo: string;
+  /** 0..1 pra barra de progresso do HUD. */
+  progresso: number;
+  onMenos: () => void;
+  onMais: () => void;
+  onPular: () => void;
+}
+
 /**
- * O minigame do descanso (Modo Dopamina). Se auto-gate no perfil: sem o modo
+ * O minigame do descanso (Modo Dopamina). Auto-gate no perfil: sem o modo
  * ligado, renderiza nada.
  *
- * Montado dentro do RestTimer, entao desmonta junto com ele quando o descanso
- * acaba (onDone) — o jogo nunca sobrevive ao fim do descanso.
+ * Abre em tela cheia automaticamente (GameOverlay via portal). Minimizar fecha
+ * o overlay sem encerrar o descanso — o card do RestTimer reaparece com um botão
+ * pra voltar ao jogo. Montado dentro do RestTimer, então desmonta junto quando o
+ * descanso acaba (onDone) — o jogo nunca sobrevive ao fim do descanso.
  */
-export function RestGame() {
+export function RestGame({ tempo, progresso, onMenos, onMais, onPular }: RestGameProps) {
   const { user } = useAuth();
   const { data: profile } = useProfile(!!user);
   const modoLigado = profile?.dopamineMode ?? false;
-  const jogosHabilitados = profile?.dopamineGames ?? [];
+  // Referência direta do cache (estável entre renders); o fallback [] fica dentro
+  // do useMemo pra não recriar array a cada render e desestabilizar as deps.
+  const jogosHabilitados = profile?.dopamineGames;
 
   // Semente fixada uma vez por montagem (por descanso). Deriva o jogo de forma
   // pura: mesmo se o perfil revalidar no meio do descanso, a semente estavel
   // mantem o mesmo jogo — sem ref, sem efeito, sem re-sorteio a cada render.
   const [seed] = useState(() => Math.floor(Math.random() * 0xffffffff));
   const jogo = useMemo(
-    () => (modoLigado ? pickDopamineGame(jogosHabilitados, rngFromSeed(seed)) : null),
+    () => (modoLigado ? pickDopamineGame(jogosHabilitados ?? [], rngFromSeed(seed)) : null),
     [modoLigado, jogosHabilitados, seed],
   );
 
+  // Auto-abre em tela cheia; minimizar volta pro card sem encerrar o descanso.
+  const [aberto, setAberto] = useState(true);
+
   if (!modoLigado || !jogo) return null;
 
+  if (!aberto) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAberto(true)}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--border)] py-2.5 text-sm font-semibold text-[var(--muted)] transition-colors hover:text-[var(--text)]"
+      >
+        ▶ Jogar {GAME_LABELS[jogo]} em tela cheia
+      </button>
+    );
+  }
+
   return (
-    <div data-testid="rest-game" className="mt-3">
-      <p className="mb-1.5 font-[family-name:var(--font-mono-face)] text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
-        Modo Dopamina · {GAME_LABELS[jogo]}
-      </p>
+    <GameOverlay
+      titulo={GAME_LABELS[jogo]}
+      tempo={tempo}
+      progresso={progresso}
+      onMenos={onMenos}
+      onMais={onMais}
+      onPular={onPular}
+      onMinimizar={() => setAberto(false)}
+    >
       {jogo === "FLAPPY" ? <FlappyGame /> : <SnakeGame />}
-    </div>
+    </GameOverlay>
   );
 }

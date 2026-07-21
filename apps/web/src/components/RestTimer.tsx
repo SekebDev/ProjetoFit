@@ -148,8 +148,15 @@ export function RestTimer({ seconds, onDone }: RestTimerProps) {
       ) : null}
 
       {/* Modo Dopamina: aparece so se o perfil ligou. Vive dentro do RestTimer,
-          entao some junto quando o descanso acaba e o timer desmonta. */}
-      <RestGame />
+          entao some junto quando o descanso acaba e o timer desmonta. Abre em
+          tela cheia (GameOverlay); o HUD reflete este mesmo cronometro. */}
+      <RestGame
+        tempo={formata(restanteSec)}
+        progresso={progresso}
+        onMenos={() => setPrazo((p) => Math.max(Date.now(), p - AJUSTE_MS))}
+        onMais={() => setPrazo((p) => p + AJUSTE_MS)}
+        onPular={onDone}
+      />
     </div>
   );
 }
