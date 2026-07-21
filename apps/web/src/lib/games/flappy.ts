@@ -27,12 +27,13 @@ export const FLAPPY = {
   world: 100,
   birdX: 25,
   birdRadius: 4,
-  gravity: 0.0009, // por ms^2
-  flapImpulse: -0.32,
-  pipeSpeed: 0.018, // unidades de mundo por ms
+  gravity: 0.00045, // por ms^2 — queda mais lenta
+  flapImpulse: -0.095, // impulso pra cima minusculo: pulo baixinho (metade da altura anterior)
+  terminalVel: 0.2, // teto da queda mais baixo, pra nao cair rapido demais
+  pipeSpeed: 0.021, // unidades de mundo por ms — mais rapido na horizontal
   pipeWidth: 14,
-  gapHeight: 34,
-  pipeSpacing: 55, // distancia horizontal entre canos
+  gapHeight: 34, // abertura mais folgada, pra dar pra passar
+  pipeSpacing: 62, // distancia horizontal entre canos (mais espaco no ritmo maior)
 } as const;
 
 /** Onde nasce a abertura do proximo cano. Injetavel pra testar sem aleatorio. */
@@ -79,7 +80,12 @@ export function stepFlappy(
 ): FlappyState {
   if (state.dead) return state;
 
-  const velocity = state.velocity + FLAPPY.gravity * dtMs;
+  // Clampa so a queda (positivo = pra baixo): a velocidade terminal impede o
+  // "despencar" que acelerava sem teto. O impulso pra cima (negativo) passa livre.
+  const velocity = Math.min(
+    state.velocity + FLAPPY.gravity * dtMs,
+    FLAPPY.terminalVel,
+  );
   const birdY = state.birdY + velocity * dtMs;
 
   // Chao ou teto: morre.

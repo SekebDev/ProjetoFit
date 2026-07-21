@@ -15,6 +15,18 @@ describe("flappy", () => {
     expect(depois.birdY).toBeGreaterThan(inicial.birdY);
   });
 
+  it("a queda tem velocidade terminal (não despenca acelerando)", () => {
+    // Já caindo na terminal: somar gravidade não pode ultrapassá-la.
+    const caindo: FlappyState = {
+      ...createFlappy(),
+      birdY: FLAPPY.world / 2,
+      velocity: FLAPPY.terminalVel,
+    };
+    const depois = stepFlappy(caindo, 100);
+    expect(depois.velocity).toBe(FLAPPY.terminalVel);
+    expect(depois.dead).toBe(false);
+  });
+
   it("o flap dá velocidade pra cima (negativa)", () => {
     const impulsionado = flap(createFlappy());
     expect(impulsionado.velocity).toBe(FLAPPY.flapImpulse);
