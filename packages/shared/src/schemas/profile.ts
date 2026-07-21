@@ -27,6 +27,10 @@ export const EQUIPMENT = [
   "BODYWEIGHT",
 ] as const;
 
+/** Minigames do Modo Dopamina que podem aparecer no tempo de descanso. */
+export const DOPAMINE_GAMES = ["FLAPPY", "SNAKE"] as const;
+export type DopamineGame = (typeof DOPAMINE_GAMES)[number];
+
 /** Entrada de atualização do perfil (PUT /profile). */
 export const UpdateProfileSchema = z.object({
   birthYear: z.number().int().min(1900).max(2100).nullable(),
@@ -39,6 +43,11 @@ export const UpdateProfileSchema = z.object({
   focusAreas: z.array(z.enum(FOCUS_AREAS)),
   equipment: z.array(z.enum(EQUIPMENT)),
   injuries: z.string().max(1000).nullable(),
+  // Modo Dopamina: liga os minigames no descanso e restringe quais podem
+  // aparecer. Ambos com default no schema — perfis antigos (PUT sem os campos)
+  // continuam validos e caem no comportamento desligado.
+  dopamineMode: z.boolean().default(false),
+  dopamineGames: z.array(z.enum(DOPAMINE_GAMES)).default([]),
 });
 export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>;
 

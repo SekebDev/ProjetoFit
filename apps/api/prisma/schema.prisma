@@ -38,6 +38,11 @@ model Profile {
   focusAreas  String[] // Postgres nativo: ["UPPER","SHOULDERS"]
   equipment   String[] // ["BARBELL","DUMBBELL","MACHINE","CABLE"]
   injuries    String?
+  // Modo Dopamina: minigames no tempo de descanso. `dopamineMode` liga o modo;
+  // `dopamineGames` restringe quais jogos podem aparecer (vazio = todos). Mora
+  // aqui, junto de focusAreas/equipment, porque e preferencia declarada uma vez.
+  dopamineMode  Boolean  @default(false)
+  dopamineGames String[] // ["FLAPPY","SNAKE"] — vazio sorteia entre todos
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
