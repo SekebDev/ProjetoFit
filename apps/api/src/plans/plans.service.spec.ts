@@ -277,6 +277,152 @@ describe("PlansService", () => {
       );
       expect(deleteMany).not.toHaveBeenCalled();
     });
+
+    /**
+     * O bug que estas asercoes travam: editar o plano zerava o planDayId da
+     * sessao em andamento (SetNull) sem fechar a sessao. Ela virava uma orfa
+     * aberta que o painel oferecia pra sempre e ninguem conseguia encerrar.
+     */
+    describe("sessoes em andamento", () => {
+      /** Os dias novos que o update recria, com os ids que o Prisma gerou. */
+      const diasRecriados = [
+        { id: "novo-push", name: "Push", order: 0, exercises: [] },
+        { id: "novo-pull", name: "Pull", order: 1, exercises: [] },
+      ];
+
+      function fakeTx(sessoesDoPush: unknown[]) {
+        return {
+          workoutPlan: {
+            findFirst: vi.fn().mockResolvedValue({ id: "pl1" }),
+            update: vi
+              .fn()
+              .mockResolvedValue({ ...planRow, days: diasRecriados }),
+          },
+          planDay: {
+            deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
+            findMany: vi
+              .fn()
+              .mockResolvedValue([
+                { id: "d1", name: "Push", order: 0, sessions: sessoesDoPush },
+              ]),
+          },
+          exercise: { count: vi.fn().mockResolvedValue(3) },
+          workoutSession: { update: vi.fn(), delete: vi.fn() },
+        };
+      }
+
+      function servicoCom(tx: unknown) {
+        return new PlansService({
+          $transaction: vi.fn(async (cb: (t: unknown) => unknown) => cb(tx)),
+        } as never);
+      }
+
+      it("re-aponta a sessao aberta para o dia recriado", async () => {
+        // O que faz o treino continuar de onde parou, ja com o exercicio que a
+        // pessoa entrou no plano pra adicionar.
+        const tx = fakeTx([
+          { id: "s1", date: new Date(), _count: { setLogs: 2 } },
+        ]);
+
+        await servicoCom(tx).update("u1", "pl1", input);
+
+        expect(tx.workoutSession.update).toHaveBeenCalledWith({
+          where: { id: "s1" },
+          data: { planDayId: "novo-push" },
+        });
+        expect(tx.workoutSession.delete).not.toHaveBeenCalled();
+      });
+
+      it("le os dias antigos ANTES do deleteMany", async () => {
+        // Depois do delete o vinculo some (SetNull) e nao da mais pra saber de
+        // que dia cada sessao aberta veio.
+        const ordem: string[] = [];
+        const tx = fakeTx([]);
+        tx.planDay.findMany.mockImplementation(() => {
+          ordem.push("findMany");
+          return Promise.resolve([
+            { id: "d1", name: "Push", order: 0, sessions: [] },
+          ]);
+        });
+        tx.planDay.deleteMany.mockImplementation(() => {
+          ordem.push("deleteMany");
+          return Promise.resolve({ count: 1 });
+        });
+
+        await servicoCom(tx).update("u1", "pl1", input);
+
+        expect(ordem).toEqual(["findMany", "deleteMany"]);
+      });
+
+      it("encerra a sessao com series quando o dia sumiu do plano", async () => {
+        const inicio = new Date(Date.now() - 60_000);
+        const tx = fakeTx([]);
+        // Nenhum dia novo casa com "Vazio" nem com o order 9.
+        tx.planDay.findMany.mockResolvedValue([
+          {
+            id: "d9",
+            name: "Vazio",
+            order: 9,
+            sessions: [{ id: "s1", date: inicio, _count: { setLogs: 3 } }],
+          },
+        ]);
+
+        await servicoCom(tx).update("u1", "pl1", input);
+
+        const data = tx.workoutSession.update.mock.calls[0][0].data;
+        expect(data.finishedAt).toBeInstanceOf(Date);
+        // ~60s de treino: o dado do usuario vai pro historico, nao some.
+        expect(data.durationSec).toBeGreaterThanOrEqual(59);
+        expect(tx.workoutSession.delete).not.toHaveBeenCalled();
+      });
+
+      it("apaga a sessao vazia quando o dia sumiu, sem sujar o historico", async () => {
+        const tx = fakeTx([]);
+        tx.planDay.findMany.mockResolvedValue([
+          {
+            id: "d9",
+            name: "Vazio",
+            order: 9,
+            sessions: [{ id: "s1", date: new Date(), _count: { setLogs: 0 } }],
+          },
+        ]);
+
+        await servicoCom(tx).update("u1", "pl1", input);
+
+        expect(tx.workoutSession.delete).toHaveBeenCalledWith({
+          where: { id: "s1" },
+        });
+        expect(tx.workoutSession.update).not.toHaveBeenCalled();
+      });
+
+      it("nao mexe em sessao nenhuma quando nao ha treino em andamento", async () => {
+        const tx = fakeTx([]);
+
+        await servicoCom(tx).update("u1", "pl1", input);
+
+        expect(tx.workoutSession.update).not.toHaveBeenCalled();
+        expect(tx.workoutSession.delete).not.toHaveBeenCalled();
+      });
+
+      it("busca so as sessoes ainda abertas", async () => {
+        // Sessao encerrada nao pode ser re-apontada nem reaberta: ela ja e
+        // historico, e o planDayId null dela e so ausencia de prescricao.
+        const tx = fakeTx([]);
+
+        await servicoCom(tx).update("u1", "pl1", input);
+
+        expect(tx.planDay.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { planId: "pl1" },
+            select: expect.objectContaining({
+              sessions: expect.objectContaining({
+                where: { finishedAt: null },
+              }),
+            }),
+          }),
+        );
+      });
+    });
   });
 
   describe("remove", () => {

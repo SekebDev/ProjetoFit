@@ -87,30 +87,14 @@ function CardPrincipal() {
   return <CardSemTreino plans={plans.data ?? []} />;
 }
 
+/**
+ * O `planDayId` aqui e sempre preenchido: o servidor ignora sessao aberta sem
+ * dia (sessions.service.activeSession), justamente porque ela nao tem pra onde
+ * retomar. Por isso o link nao precisa de fallback.
+ */
 function CardRetomar({ session }: { session: Session }) {
   const nome = session.planDay?.name ?? "Treino";
   const feitas = session.setLogs.length;
-
-  // planDayId null: o plano foi editado no meio da sessao (FK SetNull). Nao ha
-  // pra onde retomar a prescricao, entao mandamos pro historico em vez de um
-  // link quebrado.
-  if (!session.planDayId) {
-    return (
-      <div className="rounded-xl border border-[var(--m-arms)]/40 bg-[var(--m-arms)]/10 p-5">
-        <Eyebrow>Em andamento</Eyebrow>
-        <h2 className="mt-1 font-[family-name:var(--font-display-face)] text-2xl font-bold">
-          {nome}
-        </h2>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          O plano mudou depois que este treino começou.{" "}
-          <Link href="/history" className="underline">
-            Ver no histórico
-          </Link>
-          .
-        </p>
-      </div>
-    );
-  }
 
   return (
     <Link
