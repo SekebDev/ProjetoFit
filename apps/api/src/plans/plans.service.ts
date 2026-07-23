@@ -13,6 +13,7 @@ import type {
 import { toPlan, type PlanRow } from "../common/plan-mappers";
 import { PrismaService } from "../prisma/prisma.service";
 import { pickNextWorkout } from "./next-workout";
+import { resolveRebind, type DiaNovo } from "./rebind-sessions";
 
 /** Traz o plano inteiro: dias ordenados, exercicios ordenados, com o Exercise. */
 const PLAN_INCLUDE = {
@@ -70,6 +71,92 @@ async function assertExercisesExist(
   const found = await client.exercise.count({ where: { id: { in: ids } } });
   if (found !== ids.length) {
     throw new BadRequestException("O plano referencia um exercício inexistente");
+  }
+}
+
+/** O dia como ele estava antes da edicao, com as sessoes que ficaram abertas. */
+interface DiaComSessoesAbertas {
+  id: string;
+  name: string;
+  order: number;
+  sessions: {
+    id: string;
+    date: Date;
+    _count: { setLogs: number };
+  }[];
+}
+
+/** So o que o rebindSessoesAbertas precisa — serve pro PrismaService e pra tx. */
+interface SessionWriter {
+  workoutSession: {
+    update: (args: {
+      where: { id: string };
+      data: { planDayId: string } | { finishedAt: Date; durationSec: number };
+    }) => Promise<unknown>;
+    delete: (args: { where: { id: string } }) => Promise<unknown>;
+  };
+}
+
+/**
+ * Re-aponta para os dias recriados as sessoes que estavam abertas quando o
+ * plano foi editado.
+ *
+ * Sem isto a sessao fica com planDayId null (onDelete: SetNull) e finishedAt
+ * null ao mesmo tempo: aberta, sem prescricao e sem nenhum caminho na UI que
+ * consiga fecha-la — o painel trava no aviso "o plano mudou" pra sempre.
+ *
+ * Quando o dia nao sobreviveu a edicao nao ha pra onde re-apontar, e ai o
+ * destino depende do que se perde: sessao COM series vai pro historico
+ * encerrada (o dado do usuario e preservado), sessao vazia e APAGADA — e nao
+ * encerrada. A diferenca importa: a sequencia conta qualquer sessao com
+ * finishedAt preenchido, sem olhar se ha serie registrada
+ * (progress/streak-query.ts), entao encerrar a vazia daria um dia de sequencia
+ * por um treino que nunca aconteceu.
+ *
+ * De proposito NAO concede XP ao encerrar: o treino nao foi concluido pelo
+ * usuario, foi interrompido por uma edicao de plano. Pagar XP aqui daria pra
+ * farmar recompensa comecando treinos e editando o plano em seguida.
+ *
+ * Uma consequencia aceita do re-vinculo: se a edicao REMOVEU um exercicio que
+ * ja tinha serie registrada, os SetLog dele continuam na sessao (penduram nela,
+ * nao no dia) mas somem da tela, que renderiza a prescricao nova. O contador
+ * pode entao mostrar mais series feitas que prescritas. Preferimos isso a
+ * apagar registro de treino que a pessoa de fato fez.
+ */
+async function rebindSessoesAbertas(
+  client: SessionWriter,
+  antigos: readonly DiaComSessoesAbertas[],
+  novos: readonly DiaNovo[],
+  agora: Date,
+): Promise<void> {
+  for (const antigo of antigos) {
+    const destino = resolveRebind(antigo, novos);
+
+    for (const sessao of antigo.sessions) {
+      if (destino) {
+        await client.workoutSession.update({
+          where: { id: sessao.id },
+          data: { planDayId: destino },
+        });
+        continue;
+      }
+
+      if (sessao._count.setLogs === 0) {
+        await client.workoutSession.delete({ where: { id: sessao.id } });
+        continue;
+      }
+
+      await client.workoutSession.update({
+        where: { id: sessao.id },
+        data: {
+          finishedAt: agora,
+          durationSec: Math.max(
+            0,
+            Math.round((agora.getTime() - sessao.date.getTime()) / 1000),
+          ),
+        },
+      });
+    }
   }
 }
 
@@ -204,6 +291,23 @@ export class PlansService {
       }
       // Valida antes de apagar: um id ruim aqui abortaria a transacao no meio.
       await assertExercisesExist(tx, input);
+
+      // Fotografa os dias e as sessoes ainda abertas ANTES de apagar: depois do
+      // deleteMany o vinculo some (SetNull) e nao ha mais como saber de que dia
+      // cada sessao em andamento veio.
+      const antigos = await tx.planDay.findMany({
+        where: { planId: id },
+        select: {
+          id: true,
+          name: true,
+          order: true,
+          sessions: {
+            where: { finishedAt: null },
+            select: { id: true, date: true, _count: { select: { setLogs: true } } },
+          },
+        },
+      });
+
       // Substituicao total: apaga os dias (a cascata leva os PlanExercise) e
       // recria. Mais previsivel que fazer diff de arvore aninhada.
       await tx.planDay.deleteMany({ where: { planId: id } });
@@ -216,8 +320,23 @@ export class PlansService {
         },
         include: PLAN_INCLUDE,
       });
+
+      // Depois de recriar, de proposito: so agora existem os ids novos pra onde
+      // apontar as sessoes que ficaram orfas.
+      await rebindSessoesAbertas(tx, antigos, row.days, new Date());
+
       return toPlan(row as PlanRow);
-    });
+    },
+    // Acima dos 5s padrao, pelo mesmo motivo do finish (sessions.service): a
+    // transacao deixou de ser "apaga e recria os dias" e passou a incluir uma
+    // escrita por sessao em andamento. Sao poucas na pratica (o normal e zero ou
+    // uma), mas estourar o tempo aqui desfaria a edicao inteira do plano — e o
+    // usuario perderia o trabalho por causa da faxina que ele nem pediu.
+    //
+    // O maxWait sobe junto: tolerar transacao longa nao adianta se a espera POR
+    // UMA CONEXAO continua nos 2s padrao.
+    { timeout: 15_000, maxWait: 10_000 },
+    );
   }
 
   async activate(userId: string, id: string): Promise<Plan> {

@@ -577,10 +577,30 @@ describe("SessionsService", () => {
 
       expect(findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { userId: "u1", finishedAt: null },
+          where: {
+            userId: "u1",
+            finishedAt: null,
+            planDayId: { not: null },
+          },
           orderBy: { date: "desc" },
         }),
       );
+    });
+
+    it("ignora a sessao aberta que ficou sem dia", async () => {
+      // Uma orfa (aberta E sem planDay) nao tem pra onde retomar: o painel
+      // ofereceria "continuar" apontando pra lugar nenhum, e como so da pra
+      // encerrar dentro de /workout/[planDayId], ela travaria o painel pra
+      // sempre. Melhor o painel seguir pro proximo treino agendado.
+      const findFirst = vi.fn().mockResolvedValue(null);
+      const service = makeService(
+        fakePrisma({ workoutSession: { findFirst } }),
+      );
+
+      await service.activeSession("u1");
+
+      const where = findFirst.mock.calls[0][0].where;
+      expect(where.planDayId).toEqual({ not: null });
     });
 
     it("devolve a sessao com a prescricao e as series pra tela retomar", async () => {

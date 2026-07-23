@@ -302,10 +302,17 @@ export class SessionsService {
    * `date desc` pelo mesmo motivo do start: no READ COMMITTED dois POSTs
    * simultaneos podem deixar duas sessoes abertas; a mais recente vence, pra nao
    * cair na vazia e perder de vista as series ja registradas.
+   *
+   * `planDayId: not null` e defesa em profundidade. Uma sessao aberta sem dia
+   * nao tem pra onde retomar: o painel oferece "continuar", o link nao existe, e
+   * como fechar so acontece dentro de /workout/[planDayId], ela nunca sai da
+   * frente — o painel fica travado nela. O update do plano ja nao produz mais
+   * esse estado (plans.service.rebindSessoesAbertas), mas ignorar a orfa aqui
+   * garante que nenhum outro caminho consiga travar o painel de novo.
    */
   async activeSession(userId: string): Promise<Session | null> {
     const row = await this.prisma.workoutSession.findFirst({
-      where: { userId, finishedAt: null },
+      where: { userId, finishedAt: null, planDayId: { not: null } },
       orderBy: { date: "desc" },
       include: SESSION_INCLUDE,
     });

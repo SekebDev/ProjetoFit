@@ -207,6 +207,72 @@ test.describe("Treino", () => {
     await expect(page.getByTestId("rest-game")).toBeHidden();
   });
 
+  /**
+   * Regressao do bug travado: editar o plano no meio do treino apagava e
+   * recriava os PlanDay, a FK da sessao virava null (SetNull) e ela ficava
+   * ABERTA sem dia. O painel oferecia "continuar" pra sempre, com o aviso "o
+   * plano mudou" e nenhum caminho pra encerrar — nem iniciar e finalizar o
+   * treino de novo resolvia, porque isso criava outra sessao e a orfa continuava
+   * sendo a unica aberta.
+   *
+   * Percorre exatamente o relato: treina, percebe que falta exercicio, edita o
+   * plano, volta pro painel.
+   */
+  test("editar o plano no meio do treino nao trava o painel", async ({
+    page,
+  }) => {
+    await registrar(page);
+    const urlPlano = await criaPlano(page, "Edicao E2E");
+    await iniciaTreino(page);
+    await registraSerie(page, 1, "60", "10");
+    await expect(page.getByText("1/3 séries")).toBeVisible();
+
+    // Faltou um exercicio: volta no plano e adiciona.
+    await page.goto(urlPlano);
+    await page.getByRole("button", { name: /^editar$/i }).click();
+
+    // Editando um plano que ja existe, o acordeao do dia vem fechado — o botao
+    // de adicionar exercicio mora dentro dele.
+    const diaFechado = page.locator('button[aria-expanded="false"]').first();
+    if (await diaFechado.count()) await diaFechado.click();
+
+    await page.getByRole("button", { name: /adicionar exercício/i }).click();
+    const sheet = page.getByRole("dialog", { name: /escolher exercício/i });
+    await sheet.getByPlaceholder(/buscar exercício/i).fill("agachamento");
+    await sheet
+      .getByRole("button")
+      .filter({ hasText: /agachamento/i })
+      .first()
+      .click();
+    await expect(sheet).toBeHidden();
+    await page.getByRole("button", { name: /salvar alterações/i }).click();
+    await expect(
+      page.getByRole("heading", { name: "Edicao E2E" }),
+    ).toBeVisible();
+
+    // O painel: sem o aviso travado, e com o treino retomavel.
+    await page.goto("/");
+    await expect(
+      page.getByText(/o plano mudou depois que este treino começou/i),
+    ).toBeHidden();
+    const retomar = page.getByRole("link", { name: /retomar treino/i });
+    await expect(retomar).toBeVisible();
+
+    // E retomar leva de volta ao treino, com a serie registrada preservada e a
+    // prescricao ja atualizada — o motivo pelo qual a pessoa foi editar.
+    await retomar.click();
+    await page.waitForURL(/\/workout\/[a-z0-9]+$/);
+    await expect(page.getByText(/^1\/\d+ séries$/)).toBeVisible();
+
+    // A serie de 60kg sobreviveu a edicao. O exercicio original tem order 0,
+    // entao e o primeiro campo na tela; o adicionado entra depois dele.
+    await expect(
+      page.getByLabel("Carga da série 1 em kg").first(),
+    ).toHaveValue("60");
+    // ...e o exercicio recem-adicionado ja aparece na prescricao.
+    await expect(page.getByText(/agachamento/i)).toBeVisible();
+  });
+
   test("exige login pra treinar", async ({ page }) => {
     await page.goto("/workout/qualquer-id");
 
