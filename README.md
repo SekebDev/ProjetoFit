@@ -1,5 +1,7 @@
 # Hipertrof.AI — ProjetoFit
 
+**▶ Acesse o app: [hipertrofai.vercel.app](https://hipertrofai.vercel.app)**
+
 Aplicativo de treino de musculação: biblioteca de exercícios, planos manuais ou gerados por IA, registro de séries com timer de descanso, gráficos de progressão e uma camada de gamificação com XP, conquistas e ranking entre amigos.
 
 Feito mobile-first, instalável como PWA, e pensado para rodar local sem fricção.
